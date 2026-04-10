@@ -139,7 +139,7 @@ python -m ipykernel install --user --name dp261-g1 --display-name "Python (dp261
 ### 4. Configurar Google Drive Desktop
 1. Instalar Google Drive for desktop
 2. Iniciar sesión con la cuenta que tenga acceso a la carpeta compartida
-3. Verificar que la carpeta DVC-G1-Storage aparezca en Drive
+3. Verificar que la carpeta DVC-G1-Storage aparezca en Drive (link: https://drive.google.com/drive/folders/1plBl9DATtwC6qpNztwBsGbRsbFX8ZPHJ?usp=sharing)
 4. Obtener la ruta local de esa carpeta en la computadora
 
 Importante: La ruta será distinta en cada máquina y sistema operativo.
