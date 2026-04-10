@@ -5,9 +5,11 @@
 | Nombre | Rol |
 |--------|-----|
 | Pedro Shiguihara | Product Owner (P.O) |
-| _Nombre Apellido_ | _Rol del miembro_ |
-| _Nombre Apellido_ | _Rol del miembro_ |
-| _Nombre Apellido_ | _Rol del miembro_ |
+| Davida Ponce | Product Manager |
+| Freddy Nina | Business Analyst |
+|  Alexandra Lozano | Data Engineer |
+| Martin Bendezu | Data Analyst |
+| Oliver Malqui | Prototype Developer |
 
 ## GitHub Project
 
