@@ -1,1 +1,18 @@
-
+name: dp261-g1
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - ipywidgets
+  - jupyterlab
+  - pyarrow
+  - openpyxl
+  - pip
+  - pip:
+      - dvc
+      - dvc-gdrive

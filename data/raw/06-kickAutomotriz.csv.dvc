@@ -1,0 +1,5 @@
+outs:
+- md5: 7c38ca8034f74c2e517613abf95c7fcf
+  size: 13547043
+  hash: md5
+  path: 06-kickAutomotriz.csv
