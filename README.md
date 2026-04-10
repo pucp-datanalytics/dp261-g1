@@ -106,6 +106,123 @@ Entregables:
 - 03_eda.ipynb: análisis de calidad, estadísticas descriptivas, visualizaciones y hallazgos (DA)
 - 04_prototype.ipynb: prototipo interactivo con ipywidgets (PD)
 
+------------------------------------------------------
+------------------------------------------------------
+## Setup del proyecto
+
+### Requisitos
+# - Git
+# - Miniconda o Anaconda
+# - Google Drive for desktop
+# - Acceso a la carpeta compartida de Drive: DVC-G1-Storage
+
+## 1. Clonar el repositorio
+git clone https://github.com/pucp-datanalytics/dp261-g1.git
+cd dp261-g1
+
+## 2. Crear y activar el entorno Conda
+# Si el archivo se llama environment.yml:
+conda env create -f environment.yml
+conda activate dp261-g1
+
+## 3. Registrar el kernel de Jupyter (opcional)
+# Esto ayuda a que VS Code/Jupyter reconozca correctamente el entorno.
+python -m ipykernel install --user --name dp261-g1 --display-name "Python (dp261-g1)"
+
+## 4. Configurar Google Drive Desktop
+# 1. Instalar Google Drive for desktop
+# 2. Iniciar sesión con la cuenta que tenga acceso a la carpeta compartida
+# 3. Verificar que la carpeta DVC-G1-Storage aparezca en Drive
+# 4. Obtener la ruta local de esa carpeta en la computadora
+#
+# (La ruta será distinta en cada máquina y sistema operativo.)
+#
+# Ejemplo en Mac:
+# /Users/usuario/Library/CloudStorage/GoogleDrive-correo@gmail.com/My Drive/DVC-G1-Storage
+#
+# Ejemplo en Windows:
+# G:\.shortcut-targets-by-id\...\DVC-G1-Storage
+
+## 5. Configurar el remote de DVC
+# Si es la primera vez en esa computadora:
+dvc remote add --local -d teamdrive "RUTA_LOCAL_A_DVC-G1-Storage"
+
+# Si el remote teamdrive ya existía:
+# dvc remote modify --local teamdrive url "RUTA_LOCAL_A_DVC-G1-Storage"
+# dvc remote default --local teamdrive
+
+# Verificar:
+dvc remote list
+
+# Esta configuración se guarda en .dvc/config.local,
+# por lo que es local por computadora y no debe subirse a GitHub.
+
+## 6. Descargar los datos con DVC
+dvc pull
+
+# Esto materializa los archivos reales en el proyecto, por ejemplo:
+# data/raw/06-kickAutomotriz.csv
+
+## 7. Ejecutar Jupyter Lab
+jupyter lab
+
+# Si usas VS Code:
+# - seleccionar el intérprete dp261-g1
+# - seleccionar el kernel Python (dp261-g1)
+
+## 8. Orden recomendado de ejecución
+# notebooks/01_business.ipynb
+# notebooks/02_data_loading.ipynb
+# notebooks/03_eda.ipynb
+# notebooks/04_prototype.ipynb
+
+## Notas importantes
+
+# 1. No volver a inicializar Git ni DVC
+# No ejecutar:
+# git init
+# dvc init
+#
+# El repositorio ya viene inicializado.
+
+# 2. No agregar nuevamente el dataset si ya está rastreado
+# No ejecutar:
+# dvc add "data/raw/06-kickAutomotriz.csv"
+#
+# Eso solo lo hace quien incorpora un dataset nuevo al proyecto.
+
+# 3. El archivo CSV real no se sube a GitHub
+# Git versiona:
+# - *.dvc
+# - dvc.yaml / dvc.lock si existieran
+# - notebooks, código y documentación
+#
+# Git no debe subir:
+# - data/raw/06-kickAutomotriz.csv
+
+# 4. El remote de DVC es local por máquina
+# Aunque todos usan la misma carpeta compartida de Drive,
+# cada integrante debe configurar su propia ruta local una sola vez.
+
+# 5. Flujo normal de trabajo
+git pull
+conda activate dp261-g1
+dvc pull
+jupyter lab
+
+## Solo para mantenimiento de datos
+# Si se agrega o actualiza un dataset rastreado por DVC:
+dvc add "data/raw/06-kickAutomotriz.csv"
+git add data/raw/06-kickAutomotriz.csv.dvc data/raw/.gitignore
+git commit -m "Update dataset"
+git push
+dvc push
+
+# dvc push sube los datos al remote compartido de Drive.
+------------------------------------------------------
+------------------------------------------------------
+
+
 **Sprint 2 — Data Preparation** (entrega: 17/04/2026)
 
 Limpiar, transformar y construir features del dataset.
