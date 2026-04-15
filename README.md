@@ -1,16 +1,5 @@
 # dp261-g1
 
-## Miembros del Proyecto
-
-| Nombre | Rol |
-|--------|-----|
-| Pedro Shiguihara | Product Owner (P.O) |
-| Davida Ponce | Product Manager |
-| Freddy Nina | Business Analyst |
-|  Alexandra Lozano | Data Engineer |
-| Martin Bendezu | Data Analyst |
-| Oliver Malqui | Prototype Developer |
-
 ## GitHub Project
 
 Tablero del proyecto: [dp261-g1 Project](https://github.com/orgs/pucp-datanalytics/projects/1)
@@ -100,7 +89,19 @@ Los labels del repositorio siguen una convencion de prefijos para organizar el t
 
 **Sprint 1 — Business & Data Understanding** (entrega: 10/04/2026)
 
-Comprender el problema de negocio y explorar los datos.
+Miembros del Proyecto (cada S varían los roles)
+
+| Nombre | Rol |
+|--------|-----|
+| Pedro Shiguihara | Product Owner (P.O) |
+| Davida Ponce | Product Manager |
+| Freddy Nina | Business Analyst |
+|  Alexandra Lozano | Data Engineer |
+| Martin Bendezu | Data Analyst |
+| Oliver Malqui | Prototype Developer |
+
+*Objetivo: Comprender el problema de negocio y explorar los datos.*
+
 Entregables:
 - Repositorio GitHub configurado con board Kanban, Issues creados y asignados, README (PM)
 - 01_business.ipynb: problema de negocio, variable objetivo, KPIs y criterios de éxito (BA)
@@ -222,7 +223,18 @@ notebooks/04_prototype.ipynb
 
 **Sprint 2 — Data Preparation** (entrega: 17/04/2026)
 
-Limpiar, transformar y construir features del dataset.
+Miembros del Proyecto (cada S varían los roles)
+
+| Nombre | Rol |
+|--------|-----|
+| Pedro Shiguihara | Product Owner (P.O) |
+| Alexandra Lozano | Product Manager |
+| Davida Ponce | Data Cleaner |
+| Oliver Malqui | Feature Engineer |
+| Martin Bendezu | Class Balancer |
+| Freddy Nina | Pipeline Builder |
+
+*Objetivo: Limpiar, transformar y construir features del dataset.*
 Entregables:
 - Pipeline de limpieza y transformación de datos
 - Ingeniería de características (feature engineering)
