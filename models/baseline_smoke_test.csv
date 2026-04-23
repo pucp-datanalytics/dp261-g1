@@ -1,0 +1,6 @@
+model_key,artifact_exists,n_predictions,sample_predictions
+lr,True,5,"[1, 1, 0, 1, 1]"
+dt,True,5,"[1, 1, 0, 0, 1]"
+rf,True,5,"[1, 1, 0, 0, 1]"
+svm,True,5,"[1, 1, 1, 1, 1]"
+knn,True,5,"[1, 1, 1, 0, 1]"
