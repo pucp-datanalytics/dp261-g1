@@ -1,1 +1,6 @@
 /preprocessor.pkl
+/baseline_lr.pkl
+/baseline_dt.pkl
+/baseline_rf.pkl
+/baseline_svm.pkl
+/baseline_knn.pkl

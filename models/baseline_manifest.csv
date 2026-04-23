@@ -1,0 +1,6 @@
+model_key,estimator,artifact_path,target_col,train_rows,train_columns,status,notes
+lr,LogisticRegression,/Users/alexandralozano/dp261-g1/models/baseline_lr.pkl,IsBadBuy,102410,59,trained,Default baseline parameters
+dt,DecisionTreeClassifier,/Users/alexandralozano/dp261-g1/models/baseline_dt.pkl,IsBadBuy,102410,59,trained,Default baseline parameters
+rf,RandomForestClassifier,/Users/alexandralozano/dp261-g1/models/baseline_rf.pkl,IsBadBuy,102410,59,trained,Default baseline parameters
+svm,SVC,/Users/alexandralozano/dp261-g1/models/baseline_svm.pkl,IsBadBuy,102410,59,trained,Default baseline parameters
+knn,KNeighborsClassifier,/Users/alexandralozano/dp261-g1/models/baseline_knn.pkl,IsBadBuy,102410,59,trained,Default baseline parameters
