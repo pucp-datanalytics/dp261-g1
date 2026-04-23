@@ -1,11 +1,44 @@
-name: base
+name: dp261-g1
 channels:
   - conda-forge
 dependencies:
-  - python=3.12
-  - conda[version='>=25.11.0']
-  - mamba[version='>=2.4.0']
+  - python=3.10
   - pip
-  - dvc
+
+  # notebooks / jupyter
+  - jupyterlab
+  - notebook
+  - ipykernel
+  - nbconvert
+  - nbformat
+  - ipywidgets
+  - jupyterlab_widgets
+  - widgetsnbextension
+
+  # base data stack
+  - numpy
+  - pandas
+  - scipy
+  - python-dateutil
+  - pytz
+
+  # visualization
+  - matplotlib
+  - seaborn
+  - plotly
+
+  # ml
+  - scikit-learn
   - imbalanced-learn
-prefix: /Users/alexandralozano/miniforge3
+  - joblib
+
+  # files / I/O
+  - openpyxl
+  - pyarrow
+
+  # versioning / config
+  - dvc
+  - pyyaml
+
+  # optional but useful for notebooks/debug
+  - tqdm
