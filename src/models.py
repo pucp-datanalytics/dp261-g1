@@ -1,3 +1,11 @@
+"""
+Módulo para gestión de modelos, experimentos y persistencia.
+
+Provee utilidades reutilizables para:
+- persistencia (guardado y carga de artefactos con joblib)
+- recarga y validación rápida
+- tracking de experimentos (registro de logs en formato CSV)
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -47,7 +55,16 @@ def load_experiment_log(path: str | Path) -> pd.DataFrame:
 
 
 def append_experiment_log(row: dict, path: str | Path) -> pd.DataFrame:
-    """Agrega un registro al log de experimentos y devuelve el DataFrame actualizado."""
+    """
+    Agrega un registro al log de experimentos y devuelve el DataFrame actualizado.
+    
+    El diccionario `row` puede soportar columnas extendidas para control de
+    estrategias y métricas clave del sprint, por ejemplo:
+    - 'training_dataset'
+    - 'balance_strategy'
+    - 'feature_strategy'
+    - 'primary_selection_metric'
+    """
     log_path = Path(path)
     existing = load_experiment_log(log_path)
 
