@@ -1,2 +1,4 @@
 /cleaned_data.csv
 /featured_data.csv
+/cleaned_data_no_iqr.csv
+/featured_data_knn.csv

@@ -4,3 +4,5 @@
 /baseline_rf.pkl
 /baseline_svm.pkl
 /baseline_knn.pkl
+/baseline_gb.pkl
+/preprocessor_knn.pkl

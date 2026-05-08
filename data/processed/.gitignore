@@ -1,3 +1,5 @@
 /train_balanced.csv
 /test_original.csv
 /balance_summary.csv
+/train_balanced_knn_raw.csv
+/test_original_knn_raw.csv
