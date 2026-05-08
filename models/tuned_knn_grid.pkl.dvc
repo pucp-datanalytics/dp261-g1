@@ -1,0 +1,5 @@
+outs:
+- md5: 84e3c84b807e7808c787b811076dbf5f
+  size: 58838633
+  hash: md5
+  path: tuned_knn_grid.pkl

@@ -6,3 +6,6 @@
 /baseline_knn.pkl
 /baseline_gb.pkl
 /preprocessor_knn.pkl
+/tuned_rf_grid.pkl
+/tuned_dt_grid.pkl
+/tuned_knn_grid.pkl
