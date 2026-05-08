@@ -1,0 +1,4 @@
+model_key,search_method,primary_metric,best_cv_score,best_params,fit_time_seconds,artifact_path,data_variant,rationale
+dt,grid,precision,0.8780952919987651,"{""clf__criterion"": ""entropy"", ""clf__max_depth"": null}",144.4,/Users/alexandralozano/dp261-g1/models/tuned_dt_grid.pkl,general,DT usa un grid mínimo y rápido.
+knn,grid,precision,0.7628343036752739,"{""clf__n_neighbors"": 5, ""clf__weights"": ""distance""}",2356.8,/Users/alexandralozano/dp261-g1/models/tuned_knn_grid.pkl,knn_raw,KNN mantiene grid exhaustivo en un espacio muy pequeño.
+rf,grid,precision,0.9811679262563618,"{""clf__max_depth"": null, ""clf__n_estimators"": 200}",3351.7,/Users/alexandralozano/dp261-g1/models/tuned_rf_grid.pkl,general,RF se deja con un grid mínimo para cumplir con probar más de un hiperparámetro sin bloquear la laptop.
