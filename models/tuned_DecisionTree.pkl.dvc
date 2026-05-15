@@ -1,0 +1,5 @@
+outs:
+- md5: 52ebabe516ea34419ab08d465737016a
+  size: 85892
+  hash: md5
+  path: tuned_DecisionTree.pkl

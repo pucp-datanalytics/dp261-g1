@@ -1,0 +1,5 @@
+outs:
+- md5: 3f8516470096343533f68ead56ef6aa4
+  size: 67482
+  hash: md5
+  path: baseline_LogisticRegression.pkl

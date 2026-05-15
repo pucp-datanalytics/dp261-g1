@@ -1,0 +1,9 @@
+scenario,threshold,confusion_cell,count,unit_value,total_value,business_meaning
+operational_0_50,0.5,TP_bad_buy_detected,1105,2500,2762500,Bad Buy detectado; se evita comprar una unidad riesgosa
+operational_0_50,0.5,FP_good_buy_rejected,3040,-900,-2736000,Auto bueno marcado como malo; se pierde oportunidad comercial
+operational_0_50,0.5,FN_bad_buy_missed,690,0,0,Bad Buy no detectado; se acepta una unidad riesgosa
+operational_0_50,0.5,TN_good_buy_accepted,9762,0,0,Auto bueno aceptado; flujo normal de compra
+business_optimal,0.7,TP_bad_buy_detected,659,2500,1647500,Bad Buy detectado; se evita comprar una unidad riesgosa
+business_optimal,0.7,FP_good_buy_rejected,631,-900,-567900,Auto bueno marcado como malo; se pierde oportunidad comercial
+business_optimal,0.7,FN_bad_buy_missed,1136,0,0,Bad Buy no detectado; se acepta una unidad riesgosa
+business_optimal,0.7,TN_good_buy_accepted,12171,0,0,Auto bueno aceptado; flujo normal de compra

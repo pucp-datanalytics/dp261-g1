@@ -1,0 +1,5 @@
+outs:
+- md5: 2bd415643c410aff700cfbb2d10610f1
+  size: 1621
+  hash: md5
+  path: preprocessor_ordinal.pkl

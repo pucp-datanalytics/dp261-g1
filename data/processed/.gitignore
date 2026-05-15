@@ -3,3 +3,6 @@
 /balance_summary.csv
 /train_balanced_knn_raw.csv
 /test_original_knn_raw.csv
+/test_final.csv
+/train_full.csv
+/train_sample.csv
