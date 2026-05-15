@@ -1,5 +1,0 @@
-outs:
-- md5: 63a3710dff96499d76f52d62b2ee1dc6
-  size: 28251
-  hash: md5
-  path: preprocessor_knn.pkl

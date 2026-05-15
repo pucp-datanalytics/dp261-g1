@@ -1,0 +1,5 @@
+outs:
+- md5: e5ae2b668313f74b7639d7a3ffca79dc
+  size: 73178
+  hash: md5
+  path: tuned_LogisticRegression.pkl

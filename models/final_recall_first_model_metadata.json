@@ -1,0 +1,8 @@
+{
+  "model_name": "LogisticRegression",
+  "threshold": 0.02,
+  "score_type": "predict_proba",
+  "priority": "recall_then_f2_then_precision",
+  "model_path": "/Users/alexandralozano/dp261-g1/models/tuned_LogisticRegression.pkl",
+  "ranking_path": "/Users/alexandralozano/dp261-g1/reports/final_model_ranking_recall_first_with_threshold.csv"
+}

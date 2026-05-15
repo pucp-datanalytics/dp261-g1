@@ -1,0 +1,5 @@
+outs:
+- md5: d6af4b64a1794c1f80aea0037d07dc0c
+  size: 65906
+  hash: md5
+  path: baseline_Dummy_most_frequent.pkl

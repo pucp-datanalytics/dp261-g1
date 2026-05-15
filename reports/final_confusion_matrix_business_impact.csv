@@ -1,0 +1,5 @@
+case,count,unit_value,total_value
+TP - Bad Buy detectado,659,1200,790800
+FP - Auto bueno rechazado,631,-1800,-1135800
+FN - Bad Buy no detectado,1136,-900,-1022400
+TN - Auto bueno aceptado,12171,0,0

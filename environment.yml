@@ -1,6 +1,7 @@
 name: dp261-g1
 channels:
   - conda-forge
+
 dependencies:
   - python=3.10
   - pip
@@ -26,11 +27,21 @@ dependencies:
   - matplotlib
   - seaborn
   - plotly
+  - kaleido
 
   # ml
   - scikit-learn
   - imbalanced-learn
   - joblib
+
+  # tuning / advanced models
+  - optuna
+  - xgboost
+  - lightgbm
+
+  # explainability / dashboard
+  - shap
+  - streamlit
 
   # files / I/O
   - openpyxl
@@ -38,6 +49,7 @@ dependencies:
 
   # versioning / config
   - dvc
+  - dvc-gdrive
   - pyyaml
 
   # optional but useful for notebooks/debug

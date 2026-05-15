@@ -1,0 +1,5 @@
+outs:
+- md5: 4157fa9c04a1a5a1934dcb1546715847
+  size: 73062
+  hash: md5
+  path: tuned_LinearSVM.pkl
