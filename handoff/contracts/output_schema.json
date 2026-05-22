@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BadBuyPredictionOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "risk_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Probabilidad estimada de IsBadBuy=1."
+    },
+    "threshold": {
+      "type": "number",
+      "description": "Threshold operativo aplicado. Default Sprint 5: 0.70."
+    },
+    "prediction": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "description": "1 = revisar/rechazar como posible Bad Buy; 0 = continuar evaluacion."
+    },
+    "decision": {
+      "type": "string"
+    },
+    "model_name": {
+      "type": "string"
+    },
+    "model_version": {
+      "type": "string"
+    },
+    "business_value_assumptions": {
+      "type": "object"
+    },
+    "shap_top_features": {
+      "type": "array",
+      "description": "Top variables explicativas por SHAP para la instancia.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "feature": {
+            "type": "string"
+          },
+          "shap_value": {
+            "type": "number"
+          },
+          "impact_direction": {
+            "type": "string",
+            "enum": [
+              "sube_riesgo",
+              "baja_riesgo"
+            ]
+          }
+        },
+        "required": [
+          "feature",
+          "shap_value",
+          "impact_direction"
+        ]
+      }
+    }
+  },
+  "required": [
+    "risk_score",
+    "threshold",
+    "prediction",
+    "decision",
+    "model_name",
+    "model_version"
+  ]
+}

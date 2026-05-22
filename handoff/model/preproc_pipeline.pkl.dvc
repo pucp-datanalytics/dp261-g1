@@ -1,0 +1,5 @@
+outs:
+- md5: ca0518fbe0b4918c2dcd256800b79653
+  size: 1787
+  hash: md5
+  path: preproc_pipeline.pkl
