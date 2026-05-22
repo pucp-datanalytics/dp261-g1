@@ -1,0 +1,26 @@
+{
+  "risk_score": 0.73,
+  "threshold": 0.7,
+  "prediction": 1,
+  "decision": "Revisar / rechazar como posible Bad Buy",
+  "model_name": "LogisticRegression",
+  "model_version": "sprint5-final-threshold-0.70",
+  "business_value_assumptions": {
+    "benefit_tp": 2500,
+    "cost_fp": -900,
+    "cost_fn": 0,
+    "benefit_tn": 0
+  },
+  "shap_top_features": [
+    {
+      "feature": "num__VehicleAge",
+      "shap_value": 0.18,
+      "impact_direction": "sube_riesgo"
+    },
+    {
+      "feature": "num__VehBCost",
+      "shap_value": -0.11,
+      "impact_direction": "baja_riesgo"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# Minimal para Sprint 6 API + modelo
+python-dateutil
+pytz
+numpy
+pandas
+scikit-learn
+scipy
+joblib
+fastapi
+uvicorn[standard]
+pydantic
+shap
+
+# Dashboard local / integracion posterior
+streamlit
+plotly
+
+# Versionamiento de artefactos
+dvc
+dvc-gdrive
