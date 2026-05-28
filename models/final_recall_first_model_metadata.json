@@ -1,18 +1,8 @@
 {
-  "model_name": "LogisticRegression",
-  "model_display_name": "LogisticRegression tuneado",
-  "threshold": 0.7,
-  "threshold_source": "Sprint 5 business value optimization",
+  "model_name": "HistGradientBoosting",
+  "threshold": 0.09,
   "score_type": "predict_proba",
-  "priority": "maximize_expected_business_value",
-  "business_assumptions": {
-    "benefit_tp": 2500,
-    "cost_fp": -900,
-    "cost_fn": 0,
-    "benefit_tn": 0
-  },
-  "model_path": "models/final_model.pkl",
-  "model_dvc_path": "models/final_model.pkl.dvc",
-  "ranking_path": "reports/threshold_business_value_comparison.csv",
-  "decision": "GO controlado hacia Sprint 6"
+  "priority": "recall_then_f2_then_precision",
+  "model_path": "c:\\Users\\PONCE\\dp261-g1\\models\\tuned_HistGradientBoosting.pkl",
+  "ranking_path": "c:\\Users\\PONCE\\dp261-g1\\reports\\final_model_ranking_recall_first_with_threshold.csv"
 }

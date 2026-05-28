@@ -25,6 +25,13 @@ def recall_refit(cv_results):
 def build_candidate_pipeline(model_name, X):
     model_name = model_name.lower()
 
+    if "hist" in model_name:
+        from sklearn.ensemble import HistGradientBoostingClassifier
+        return Pipeline([
+            ("preprocess", build_preprocessor(X, mode="ordinal")), # Boosting prefiere ordinal
+            ("clf", HistGradientBoostingClassifier(random_state=RANDOM_STATE)),
+        ])
+
     if "logistic" in model_name:
         return Pipeline([
             ("preprocess", build_preprocessor(X, mode="linear")),
