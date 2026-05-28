@@ -1,9 +1,195 @@
-model,fit_time_mean,accuracy_cv_mean,accuracy_cv_std,accuracy_train_mean,accuracy_gap,precision_cv_mean,precision_cv_std,precision_train_mean,precision_gap,recall_cv_mean,recall_cv_std,recall_train_mean,recall_gap,f1_cv_mean,f1_cv_std,f1_train_mean,f1_gap,f05_cv_mean,f05_cv_std,f05_train_mean,f05_gap,f2_cv_mean,f2_cv_std,f2_train_mean,f2_gap,roc_auc_cv_mean,roc_auc_cv_std,roc_auc_train_mean,roc_auc_gap,average_precision_cv_mean,average_precision_cv_std,average_precision_train_mean,average_precision_gap,status,seconds_total,model_path
-DecisionTree,1.9123316764831544,0.82225,0.006971370023173357,1.0,0.17774999999999996,0.30549739284177296,0.01861964369142261,1.0,0.694502607158227,0.34796747967479674,0.013868879763603235,1.0,0.6520325203252033,0.3252383278902696,0.015835701342319507,1.0,0.6747616721097305,0.31307655161455944,0.01750587051204277,1.0,0.6869234483854405,0.3384716935330694,0.014418146698058456,1.0,0.6615283064669306,0.6183680043755968,0.009128053234747698,1.0,0.3816319956244032,0.18671007599248726,0.008530887120226883,1.0,0.8132899240075128,ok,10.9,c:\Users\PONCE\dp261-g1\models\baseline_DecisionTree.pkl
-LinearSVM,0.7532371044158935,0.8962,0.0027540878707840795,0.8964375,0.0002375000000000016,0.7125357976563391,0.02233289918108857,0.7159906888350808,0.003454891178741648,0.26097560975609757,0.02176220945418565,0.26189024390243903,0.0009146341463414642,0.38173385912342067,0.02596152240089637,0.3834844710936265,0.0017506119702058176,0.5288504423399207,0.026534904845834102,0.5315942328937668,0.002743790553846104,0.2987642797020106,0.023460433807139334,0.29992949822632825,0.0011652185243176683,0.7477729185786727,0.01656674425530213,0.7701302220939825,0.022357303515309845,0.43650507823295304,0.034994323115174406,0.458244464444414,0.021739386211460987,ok,5.2,c:\Users\PONCE\dp261-g1\models\baseline_LinearSVM.pkl
-LogisticRegression,0.4414048671722412,0.8965499999999998,0.0027540878707840726,0.89765,0.001100000000000101,0.7345991102157458,0.029665334122244386,0.7491288280471737,0.01452971783142798,0.24878048780487805,0.018342299467769885,0.2524390243902439,0.003658536585365857,0.37142964022250446,0.022970972552105413,0.3775919469788819,0.006162306756377411,0.5278089183590087,0.02597085290951274,0.5375192229579268,0.009710304598918085,0.28662643507611796,0.020042830799986186,0.29102091720400447,0.004394482127886512,0.7491114386628472,0.016303826243194867,0.7711700853913472,0.022058646728499998,0.43719607834834306,0.03328211140601116,0.45983784412787976,0.022641765779536693,ok,3.5,c:\Users\PONCE\dp261-g1\models\baseline_LogisticRegression.pkl
-GradientBoosting,8.117622566223144,0.90145,0.0030757112998459337,0.9057375000000001,0.004287500000000111,0.8367236634430768,0.03347516774478362,0.8881597000079676,0.05143603656489082,0.24674796747967478,0.01843216918496688,0.26727642276422764,0.020528455284552855,0.38092210698577594,0.024881391665825283,0.4108564652759642,0.029934358290188257,0.5656455048802596,0.030099941924688435,0.606329707643899,0.04068420276363949,0.2872065398847383,0.02063337328324064,0.3107071336337743,0.02350059374903596,0.7601202477959784,0.0140567478711866,0.8111517098548265,0.05103146205884812,0.46789412170857503,0.02549684116185225,0.5515437617172115,0.0836496400086365,ok,42.0,c:\Users\PONCE\dp261-g1\models\baseline_GradientBoosting.pkl
-HistGradientBoosting,1.5125788688659667,0.9021000000000001,0.0023270152556440255,0.9088624999999999,0.006762499999999783,0.8701655922050173,0.026024536040307137,0.93708938710688,0.06692379490186262,0.23983739837398374,0.015479213629804691,0.2776422764227643,0.03780487804878055,0.375831914200067,0.020427360302681507,0.4283005958160417,0.05246868161597468,0.569915660642333,0.023483334263449687,0.6351622470326816,0.06524658639034864,0.2804177618738848,0.017231600712632775,0.3231008959930272,0.04268313411914243,0.7607548020320568,0.014342600191360584,0.9100770284935248,0.14932222646146798,0.47140074815826044,0.024300895356485542,0.7217384622556346,0.2503377140973742,ok,10.4,c:\Users\PONCE\dp261-g1\models\baseline_HistGradientBoosting.pkl
-RandomForest,3.350623273849487,0.9019499999999999,0.002604803255526198,0.9999874999999999,0.0980375,0.8863828927156601,0.030829969129404524,1.0,0.11361710728433994,0.23252032520325203,0.015242547365246072,0.9998983739837399,0.7673780487804879,0.36827422531373,0.021289720441865324,0.9999491740787801,0.6316749487650501,0.5670199894365945,0.026791058485036677,0.9999796665311103,0.43295967709451577,0.2727297330880582,0.01724468356369957,0.9999186909238744,0.7271889578358162,0.7490664775518907,0.019276135624528425,1.0,0.2509335224481093,0.45557175598373123,0.02719512698736539,1.0,0.5444282440162688,ok,19.2,c:\Users\PONCE\dp261-g1\models\baseline_RandomForest.pkl
-KNN,0.30081958770751954,0.87715,0.0004636809247747772,0.8786875000000001,0.0015375000000000805,0.530909090909091,0.08712108036880682,0.7626109470044781,0.23170185609538707,0.011382113821138212,0.0016260162601626014,0.01991869918699187,0.00853658536585366,0.02228541103973767,0.0031904900266828,0.03882096450857806,0.01653555346884039,0.05240713724610032,0.0075491984660162,0.09015332058035894,0.037746183334258616,0.014151625434095413,0.002022758521221699,0.024736450212519846,0.010584824778424432,0.6500811154063649,0.02219001251123133,0.8117273286784679,0.16164621327210293,0.21175472167486037,0.012428557291881566,0.35988345255548887,0.1481287308806285,ok,89.3,c:\Users\PONCE\dp261-g1\models\baseline_KNN.pkl
-Dummy_most_frequent,0.2567261219024658,0.877,0.0,0.877,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.0,0.5,0.0,0.123,0.0,0.123,0.0,ok,2.5,c:\Users\PONCE\dp261-g1\models\baseline_Dummy_most_frequent.pkl
+model,fit_time_mean,accuracy_cv_mean,accuracy_cv_std,accuracy_train_mean,accuracy_gap,precision_cv_mean,precision_cv_std,precision_train_mean,precision_gap,recall_cv_mean,recall_cv_std,recall_train_mean,recall_gap,f1_cv_mean,f1_cv_std,f1_train_mean,f1_gap,f05_cv_mean,f05_cv_std,f05_train_mean,f05_gap,f2_cv_mean,f2_cv_std,f2_train_mean,f2_gap,roc_auc_cv_mean,roc_auc_cv_std,roc_auc_train_mean,roc_auc_gap,average_precision_cv_mean,average_precision_cv_std,average_precision_train_mean,average_precision_gap,status,feature_set,n_features,seconds_total,model_path,error
+DecisionTree,1.8765191078186034,0.82225,0.006971370023173357,1.0,0.17774999999999996,0.30549739284177296,0.01861964369142261,1.0,0.694502607158227,0.34796747967479674,0.013868879763603235,1.0,0.6520325203252033,0.3252383278902696,0.015835701342319507,1.0,0.6747616721097305,0.31307655161455944,0.01750587051204277,1.0,0.6869234483854405,0.3384716935330694,0.014418146698058456,1.0,0.6615283064669306,0.6183680043755968,0.009128053234747698,1.0,0.3816319956244032,0.18671007599248726,0.008530887120226883,1.0,0.8132899240075128,ok,extended,38.0,10.7,c:\Users\PONCE\dp261-g1\models\baseline_DecisionTree.pkl,
+GradientBoosting,8.583468246459962,0.90145,0.0030757112998459337,0.9057375000000001,0.004287500000000111,0.8367236634430768,0.03347516774478362,0.8881597000079676,0.05143603656489082,0.24674796747967478,0.01843216918496688,0.26727642276422764,0.020528455284552855,0.38092210698577594,0.024881391665825283,0.4108564652759642,0.029934358290188257,0.5656455048802596,0.030099941924688435,0.606329707643899,0.04068420276363949,0.2872065398847383,0.02063337328324064,0.3107071336337743,0.02350059374903596,0.7601202477959784,0.0140567478711866,0.8111517098548265,0.05103146205884812,0.46789412170857503,0.02549684116185225,0.5515437617172115,0.0836496400086365,ok,extended,38.0,44.4,c:\Users\PONCE\dp261-g1\models\baseline_GradientBoosting.pkl,
+HistGradientBoosting,0.5059934616088867,0.9021000000000001,0.0023270152556440255,0.9088624999999999,0.006762499999999783,0.8701655922050173,0.026024536040307137,0.93708938710688,0.06692379490186262,0.23983739837398374,0.015479213629804691,0.2776422764227643,0.03780487804878055,0.375831914200067,0.020427360302681507,0.4283005958160417,0.05246868161597468,0.569915660642333,0.023483334263449687,0.6351622470326816,0.06524658639034864,0.2804177618738848,0.017231600712632775,0.3231008959930272,0.04268313411914243,0.7607548020320568,0.014342600191360584,0.9100770284935248,0.14932222646146798,0.47140074815826044,0.024300895356485542,0.7217384622556346,0.2503377140973742,ok,extended,38.0,5.0,c:\Users\PONCE\dp261-g1\models\baseline_HistGradientBoosting.pkl,
+RandomForest,4.60632357597351,0.9019499999999999,0.002604803255526198,0.9999874999999999,0.0980375,0.8863828927156601,0.030829969129404524,1.0,0.11361710728433994,0.23252032520325203,0.015242547365246072,0.9998983739837399,0.7673780487804879,0.36827422531373,0.021289720441865324,0.9999491740787801,0.6316749487650501,0.5670199894365945,0.026791058485036677,0.9999796665311103,0.43295967709451577,0.2727297330880582,0.01724468356369957,0.9999186909238744,0.7271889578358162,0.7490664775518907,0.019276135624528425,1.0,0.2509335224481093,0.45557175598373123,0.02719512698736539,1.0,0.5444282440162688,ok,extended,38.0,26.0,c:\Users\PONCE\dp261-g1\models\baseline_RandomForest.pkl,
+Dummy_most_frequent,0.2492222785949707,0.877,0.0,0.877,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.0,0.5,0.0,0.123,0.0,0.123,0.0,ok,extended,38.0,2.4,c:\Users\PONCE\dp261-g1\models\baseline_Dummy_most_frequent.pkl,
+LogisticRegression,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,error,,,0.0,,"
+All the 5 fits failed.
+It is very likely that your model is misconfigured.
+You can try to debug the error by setting error_score='raise'.
+
+Below are more details about the failures:
+--------------------------------------------------------------------------------
+5 fits failed with the following error:
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\pandas\core\indexes\base.py"", line 3641, in get_loc
+    return self._engine.get_loc(casted_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""pandas/_libs/index.pyx"", line 168, in pandas._libs.index.IndexEngine.get_loc
+  File ""pandas/_libs/index.pyx"", line 197, in pandas._libs.index.IndexEngine.get_loc
+  File ""pandas/_libs/hashtable_class_helper.pxi"", line 7668, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File ""pandas/_libs/hashtable_class_helper.pxi"", line 7676, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'PurchYear'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_indexing.py"", line 469, in _get_column_indices
+    col_idx = all_columns.get_loc(col)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\pandas\core\indexes\base.py"", line 3648, in get_loc
+    raise KeyError(key) from err
+KeyError: 'PurchYear'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\model_selection\_validation.py"", line 833, in _fit_and_score
+    estimator.fit(X_train, y_train, **fit_params)
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\base.py"", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 613, in fit
+    Xt = self._fit(X, y, routed_params, raw_params=params)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 547, in _fit
+    X, fitted_transformer = fit_transform_one_cached(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\joblib\memory.py"", line 326, in __call__
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 1484, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get(""fit_transform"", {}))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_set_output.py"", line 316, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\base.py"", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py"", line 991, in fit_transform
+    self._validate_column_callables(X)
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py"", line 545, in _validate_column_callables
+    transformer_to_input_indices[name] = _get_column_indices(X, columns)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_indexing.py"", line 477, in _get_column_indices
+    raise ValueError(""A given column is not a column of the dataframe"") from e
+ValueError: A given column is not a column of the dataframe
+"
+LinearSVM,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,error,,,0.1,,"
+All the 5 fits failed.
+It is very likely that your model is misconfigured.
+You can try to debug the error by setting error_score='raise'.
+
+Below are more details about the failures:
+--------------------------------------------------------------------------------
+5 fits failed with the following error:
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\pandas\core\indexes\base.py"", line 3641, in get_loc
+    return self._engine.get_loc(casted_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""pandas/_libs/index.pyx"", line 168, in pandas._libs.index.IndexEngine.get_loc
+  File ""pandas/_libs/index.pyx"", line 197, in pandas._libs.index.IndexEngine.get_loc
+  File ""pandas/_libs/hashtable_class_helper.pxi"", line 7668, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File ""pandas/_libs/hashtable_class_helper.pxi"", line 7676, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'PurchYear'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_indexing.py"", line 469, in _get_column_indices
+    col_idx = all_columns.get_loc(col)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\pandas\core\indexes\base.py"", line 3648, in get_loc
+    raise KeyError(key) from err
+KeyError: 'PurchYear'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\model_selection\_validation.py"", line 833, in _fit_and_score
+    estimator.fit(X_train, y_train, **fit_params)
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\base.py"", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 613, in fit
+    Xt = self._fit(X, y, routed_params, raw_params=params)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 547, in _fit
+    X, fitted_transformer = fit_transform_one_cached(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\joblib\memory.py"", line 326, in __call__
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 1484, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get(""fit_transform"", {}))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_set_output.py"", line 316, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\base.py"", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py"", line 991, in fit_transform
+    self._validate_column_callables(X)
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py"", line 545, in _validate_column_callables
+    transformer_to_input_indices[name] = _get_column_indices(X, columns)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_indexing.py"", line 477, in _get_column_indices
+    raise ValueError(""A given column is not a column of the dataframe"") from e
+ValueError: A given column is not a column of the dataframe
+"
+KNN,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,error,,,0.1,,"
+All the 5 fits failed.
+It is very likely that your model is misconfigured.
+You can try to debug the error by setting error_score='raise'.
+
+Below are more details about the failures:
+--------------------------------------------------------------------------------
+5 fits failed with the following error:
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\pandas\core\indexes\base.py"", line 3641, in get_loc
+    return self._engine.get_loc(casted_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""pandas/_libs/index.pyx"", line 168, in pandas._libs.index.IndexEngine.get_loc
+  File ""pandas/_libs/index.pyx"", line 197, in pandas._libs.index.IndexEngine.get_loc
+  File ""pandas/_libs/hashtable_class_helper.pxi"", line 7668, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File ""pandas/_libs/hashtable_class_helper.pxi"", line 7676, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'PurchYear'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_indexing.py"", line 469, in _get_column_indices
+    col_idx = all_columns.get_loc(col)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\pandas\core\indexes\base.py"", line 3648, in get_loc
+    raise KeyError(key) from err
+KeyError: 'PurchYear'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\model_selection\_validation.py"", line 833, in _fit_and_score
+    estimator.fit(X_train, y_train, **fit_params)
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\base.py"", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 613, in fit
+    Xt = self._fit(X, y, routed_params, raw_params=params)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 547, in _fit
+    X, fitted_transformer = fit_transform_one_cached(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\joblib\memory.py"", line 326, in __call__
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\pipeline.py"", line 1484, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get(""fit_transform"", {}))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_set_output.py"", line 316, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\base.py"", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py"", line 991, in fit_transform
+    self._validate_column_callables(X)
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py"", line 545, in _validate_column_callables
+    transformer_to_input_indices[name] = _get_column_indices(X, columns)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""c:\Users\PONCE\dp261-g1\.venv\Lib\site-packages\sklearn\utils\_indexing.py"", line 477, in _get_column_indices
+    raise ValueError(""A given column is not a column of the dataframe"") from e
+ValueError: A given column is not a column of the dataframe
+"

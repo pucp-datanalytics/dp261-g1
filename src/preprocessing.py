@@ -92,15 +92,11 @@ def get_column_groups(X: pd.DataFrame):
 
 
 def make_ohe(min_frequency=0.01):
-    try:
-        return OneHotEncoder(
-            handle_unknown="infrequent_if_exist",
-            min_frequency=min_frequency,
-            sparse_output=True,
-        )
-    except TypeError:
-        return OneHotEncoder(handle_unknown="ignore", sparse=True)
-
+    return OneHotEncoder(
+        handle_unknown="ignore", # IMPORTANTE: Evita que se quede pensando en errores
+        min_frequency=min_frequency,
+        sparse_output=False      # Matrices densas para que LR y SVM no fallen
+    )
 
 def build_preprocessor(X: pd.DataFrame, mode: str = "linear", min_frequency: float = 0.01):
     """Construye preprocesadores según la familia del modelo.

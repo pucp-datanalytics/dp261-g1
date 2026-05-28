@@ -15,7 +15,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from src.config import CV_SPLITS, MODELS_DIR, RANDOM_STATE
 from src.preprocessing import build_preprocessor
-
+from sklearn.base import clone
 
 def get_scoring():
     return {
@@ -93,27 +93,72 @@ def summarize_cv_scores(name, scores):
     return row
 
 
-def train_and_evaluate_baselines(models, X, y, save_models=False):
+
+from sklearn.base import clone
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_validate
+
+def train_and_evaluate_baselines(models, X, y, model_configs, save_models=False):
     results = []
     fitted = {}
-    for name, pipe in models.items():
+    
+    for name, original_pipe in models.items():
         start = time.time()
         try:
-            scores = evaluate_cv(pipe, X, y)
-            row = summarize_cv_scores(name, scores)
-            row["status"] = "ok"
-            row["seconds_total"] = round(time.time() - start, 1)
-            results.append(row)
-            if save_models:
-                pipe.fit(X, y)
-                path = MODELS_DIR / f"baseline_{name}.pkl"
-                joblib.dump(pipe, path)
-                row["model_path"] = str(path)
-                fitted[name] = pipe
-        except Exception as exc:
-            results.append({"model": name, "status": "error", "error": str(exc), "seconds_total": round(time.time() - start, 1)})
-    return pd.DataFrame(results), fitted
+            # 1. Filtro de columnas
+            config = model_configs.get(name, {'cols': list(X.columns)})
+            target_cols = config['cols']
+            X_filtered = X[target_cols].copy()
 
+            # 2. Reconstrucción total del Pipeline
+            from src.preprocessing import build_preprocessor
+            mode = 'linear' if name in ['LogisticRegression', 'LinearSVM', 'KNN'] else 'tree_ohe'
+            
+            # Forzamos un preprocesador nuevo que SOLO vea las columnas actuales
+            fresh_preprocessor = build_preprocessor(X_filtered, mode=mode)
+            # Clonamos solo el algoritmo (LR, RF, etc)
+            fresh_model = clone(original_pipe.named_steps['model'])
+            
+            new_pipe = Pipeline([
+                ('preprocessor', fresh_preprocessor),
+                ('model', fresh_model)
+            ])
+
+            print(f">>> Evaluando {name} ({len(target_cols)} cols)...", end=" ")
+            
+            # 3. Evaluación rápida (n_jobs=-1 usa toda tu PC)
+            # Nota: Asegúrate de que evaluate_cv use n_jobs=-1 internamente
+            scores = cross_validate(
+                new_pipe, X_filtered, y, 
+                cv=5, 
+                scoring=['recall', 'f1', 'roc_auc', 'precision'], 
+                return_train_score=True, 
+                n_jobs=-1 
+            )
+            
+            # Resumen de resultados
+            row = {
+                "model": name,
+                "recall_cv_mean": np.mean(scores['test_recall']),
+                "recall_gap": np.mean(scores['train_recall']) - np.mean(scores['test_recall']),
+                "f1_cv_mean": np.mean(scores['test_f1']),
+                "roc_auc_cv_mean": np.mean(scores['test_roc_auc']),
+                "status": "ok",
+                "n_features": len(target_cols)
+            }
+            results.append(row)
+            print("¡Listo!")
+            
+            if save_models:
+                new_pipe.fit(X_filtered, y)
+                fitted[name] = new_pipe
+                
+        except Exception as e:
+            print(f"FALLÓ: {e}")
+            results.append({"model": name, "status": "error", "error": str(e)})
+            
+    return pd.DataFrame(results), fitted
+   
 
 def save_model(model, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)

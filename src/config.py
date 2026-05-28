@@ -23,7 +23,7 @@ SECONDARY_METRIC = "f2"
 CONTROL_METRIC = "precision"
 
 # Supuestos iniciales para Sprint 5. Cámbialos si el negocio define otros costos.
-BENEFIT_TP = 2500 #supuesto de pérdida evitada por cada bad buy
-COST_FP = -900 #el costo de equivocarte prediciendo como malo un auto que sí era bueno.
-COST_FN = 0
-BENEFIT_TN = 0
+BENEFIT_TP = 2500   # Ahorro por no comprar un Bad Buy
+COST_FP = -900      # Margen perdido por rechazar un auto bueno
+COST_FN = -2500     # Pérdida real por comprar un Bad Buy (Garantía + Reparación)
+BENEFIT_TN = 900    # Margen neto por vender un auto bueno

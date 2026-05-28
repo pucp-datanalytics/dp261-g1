@@ -1,5 +1,9 @@
-case,count,unit_value,total_value,description
-TP - Bad Buy detectado,659,2500,1647500,Riesgo evitado por detectar una mala compra.
-FP - Auto bueno rechazado,631,-900,-567900,Costo por bloquear un auto que era bueno.
-FN - Bad Buy no detectado,1136,0,0,"Sin valor incremental frente a operar sin modelo, según supuesto confirmado."
-TN - Auto bueno aceptado,12171,0,0,"Flujo normal, neutral para business value incremental."
+scenario,threshold,confusion_cell,count,unit_value,total_value,business_meaning
+operational_0_50,0.09,TP_bad_buy_detected,1503,2500,3757500,Bad Buy detectado; se evita comprar una unidad riesgosa
+operational_0_50,0.09,FP_good_buy_rejected,7231,-900,-6507900,Auto bueno marcado como malo; se pierde oportunidad comercial
+operational_0_50,0.09,FN_bad_buy_missed,292,-2500,-730000,Bad Buy no detectado; se acepta una unidad riesgosa
+operational_0_50,0.09,TN_good_buy_accepted,5571,900,5013900,Auto bueno aceptado; flujo normal de compra
+business_optimal,0.48,TP_bad_buy_detected,465,2500,1162500,Bad Buy detectado; se evita comprar una unidad riesgosa
+business_optimal,0.48,FP_good_buy_rejected,208,-900,-187200,Auto bueno marcado como malo; se pierde oportunidad comercial
+business_optimal,0.48,FN_bad_buy_missed,1330,-2500,-3325000,Bad Buy no detectado; se acepta una unidad riesgosa
+business_optimal,0.48,TN_good_buy_accepted,12594,900,11334600,Auto bueno aceptado; flujo normal de compra
