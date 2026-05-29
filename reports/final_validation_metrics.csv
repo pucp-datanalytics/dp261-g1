@@ -1,2 +1,2 @@
-model,source,threshold_type,threshold,recall,f2,precision,f1,f05,roc_auc,average_precision,positive_rate,tp,fp,fn,tn,business_value,avg_value_per_vehicle,original_model_path,final_model_path
-LogisticRegression,tuned_loaded,operational_0_70,0.7,0.3671309192200557,0.38902007083825263,0.5108527131782946,0.4272285251215559,0.47375988497483823,0.7677792771759635,0.4431968904841776,0.08837432349112831,659,631,1136,12171,1079600,73.96040282249777,models/tuned_LogisticRegression.pkl,models/final_model.pkl
+threshold,accuracy,precision,recall,f1,f2,roc_auc,average_precision,tn,fp,fn,tp,business_value,business_value_per_case,positive_rate,roc_auc_ci_95
+0.5,0.7498116051243406,0.27045735475896165,0.6094707520891365,0.37465753424657533,0.4873051224944321,0.7668086332262672,0.4773382512565438,9851,2951,701,1094,2835200.0,194.2316914434473,0.27711173528807287,"[0.7548229339149255, 0.7797950201706801]"

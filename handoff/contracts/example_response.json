@@ -1,26 +1,20 @@
 {
-  "risk_score": 0.73,
-  "threshold": 0.7,
+  "risk_score": 0.57,
+  "threshold": 0.5,
   "prediction": 1,
-  "decision": "Revisar / rechazar como posible Bad Buy",
-  "model_name": "LogisticRegression",
-  "model_version": "sprint5-final-threshold-0.70",
+  "decision": "ROJO - Alto riesgo: detener compra o pasar a revisión experta",
+  "risk_segment": "ROJO",
+  "model_name": "Bagging_DecisionTree",
+  "model_version": "final-entrega-dp261-v2",
+  "api_version": "1.0.0",
   "business_value_assumptions": {
     "benefit_tp": 2500,
+    "benefit_tn": 600,
     "cost_fp": -900,
-    "cost_fn": 0,
-    "benefit_tn": 0
+    "cost_fn": -4500,
+    "equation": "TP*2500 + TN*600 + FP*(-900) + FN*(-4500)",
+    "threshold": 0.5
   },
-  "shap_top_features": [
-    {
-      "feature": "num__VehicleAge",
-      "shap_value": 0.18,
-      "impact_direction": "sube_riesgo"
-    },
-    {
-      "feature": "num__VehBCost",
-      "shap_value": -0.11,
-      "impact_direction": "baja_riesgo"
-    }
-  ]
+  "shap_top_features": [],
+  "explanation_method": "shap_if_available_else_feature_importance"
 }

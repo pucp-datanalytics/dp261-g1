@@ -1,5 +1,0 @@
-outs:
-- md5: 64f64c4fb0f1ea4df6c9e0492b53b004
-  size: 35120267
-  hash: md5
-  path: baseline_RandomForest.pkl

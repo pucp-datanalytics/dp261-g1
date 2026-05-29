@@ -1,40 +1,18 @@
 {
   "alarms": [
     {
-      "AlarmName": "badbuy-api-5xx-high",
-      "Description": "Error rate 5xx alto en API Gateway o ALB durante 5 minutos.",
-      "Namespace": "AWS/ApiGateway",
-      "MetricName": "5XXError",
-      "Statistic": "Sum",
-      "Period": 300,
-      "EvaluationPeriods": 1,
-      "Threshold": 5,
-      "ComparisonOperator": "GreaterThanThreshold",
-      "TreatMissingData": "notBreaching",
-      "Dimensions": [
-        {
-          "Name": "ApiName",
-          "Value": "badbuy-api"
-        }
-      ]
+      "name": "api-error-rate-high",
+      "metric": "5XXError",
+      "threshold": 5,
+      "period_seconds": 300,
+      "action": "Notify team through SNS"
     },
     {
-      "AlarmName": "badbuy-api-latency-p95-high",
-      "Description": "Latencia p95 superior al SLA del MVP.",
-      "Namespace": "AWS/ApiGateway",
-      "MetricName": "Latency",
-      "ExtendedStatistic": "p95",
-      "Period": 300,
-      "EvaluationPeriods": 1,
-      "Threshold": 500,
-      "ComparisonOperator": "GreaterThanThreshold",
-      "TreatMissingData": "notBreaching",
-      "Dimensions": [
-        {
-          "Name": "ApiName",
-          "Value": "badbuy-api"
-        }
-      ]
+      "name": "api-latency-high",
+      "metric": "LatencyP95",
+      "threshold_ms": 2000,
+      "period_seconds": 300,
+      "action": "Review container health and model load time"
     }
   ]
 }

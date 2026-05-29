@@ -1,228 +1,102 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "BadBuyPredictionInput",
-  "description": "Contrato de entrada para predecir si un vehiculo tiene riesgo de Bad Buy. Incluye variables raw antes de prepare_features(). IsBadBuy no debe enviarse a la API; solo se usa en evaluacion offline.",
   "type": "object",
-  "additionalProperties": true,
+  "description": "Columnas crudas del dataset original, sin variables creadas manualmente.",
   "properties": {
     "PurchDate": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "Fecha de compra. Ejemplo: 12/7/2009"
+      "type": "string/number/null"
     },
     "Auction": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "VehYear": {
-      "type": [
-        "integer",
-        "number",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "VehicleAge": {
-      "type": [
-        "integer",
-        "number",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "Make": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "Model": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "Trim": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "SubModel": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "Color": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "Transmission": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "WheelTypeID": {
-      "type": [
-        "integer",
-        "number",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "WheelType": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "VehOdo": {
-      "type": [
-        "integer",
-        "number",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "Nationality": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "Size": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "TopThreeAmericanName": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRAcquisitionAuctionAveragePrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRAcquisitionAuctionCleanPrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRAcquisitionRetailAveragePrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRAcquisitonRetailCleanPrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRCurrentAuctionAveragePrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRCurrentAuctionCleanPrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRCurrentRetailAveragePrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "MMRCurrentRetailCleanPrice": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "PRIMEUNIT": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "AUCGUART": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "BYRNO": {
-      "type": [
-        "integer",
-        "number",
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "VNZIP1": {
-      "type": [
-        "integer",
-        "number",
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "VNST": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "VehBCost": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "IsOnlineSale": {
-      "type": [
-        "integer",
-        "number",
-        "boolean",
-        "null"
-      ]
+      "type": "string/number/null"
     },
     "WarrantyCost": {
-      "type": [
-        "number",
-        "integer",
-        "null"
-      ]
+      "type": "string/number/null"
     }
-  },
-  "required": [
-    "VehicleAge",
-    "VehOdo",
-    "VehBCost",
-    "WarrantyCost"
-  ]
+  }
 }

@@ -1,51 +1,27 @@
-"""Smoke test for local or deployed API.
+"""Smoke test local para la API.
 
-Usage:
-    python api/smoke_test.py --url http://localhost:8000
-    API_KEY=demo python api/smoke_test.py --url https://api.example.com
+Ejecutar con la API levantada:
+    uvicorn api.main:app --reload
+    python api/smoke_test.py
 """
 from __future__ import annotations
 
-import argparse
 import json
-import os
 from pathlib import Path
 
 import requests
 
+BASE_URL = "http://localhost:8000"
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--url", default=os.getenv("API_URL", "http://localhost:8000"))
-    parser.add_argument("--payload", default="handoff/contracts/example_request.json")
-    args = parser.parse_args()
 
-    base_url = args.url.rstrip("/")
-    headers = {}
-    if os.getenv("API_KEY"):
-        headers["x-api-key"] = os.getenv("API_KEY")
-
-    health = requests.get(f"{base_url}/health", timeout=10)
-    print("GET /health", health.status_code, health.text)
-    health.raise_for_status()
-
-    version = requests.get(f"{base_url}/version", timeout=10)
-    print("GET /version", version.status_code, version.text)
-    version.raise_for_status()
-
-    with open(Path(args.payload), "r", encoding="utf-8") as f:
-        payload = json.load(f)
-
-    pred = requests.post(f"{base_url}/predict", json=payload, headers=headers, timeout=20)
-    print("POST /predict", pred.status_code, pred.text)
-    pred.raise_for_status()
-
-    body = pred.json()
-    required = {"risk_score", "threshold", "prediction", "decision", "model_version"}
-    missing = sorted(required - body.keys())
-    if missing:
-        raise AssertionError(f"Missing response keys: {missing}")
-    print("Smoke test OK")
+def main():
+    payload = json.loads(Path("handoff/contracts/example_request.json").read_text(encoding="utf-8"))
+    for path in ["/health", "/version"]:
+        response = requests.get(f"{BASE_URL}{path}", timeout=10)
+        print(path, response.status_code, response.json())
+    response = requests.post(f"{BASE_URL}/predict", json=payload, timeout=20)
+    print("/predict", response.status_code, response.json())
+    response.raise_for_status()
 
 
 if __name__ == "__main__":

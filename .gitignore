@@ -1,15 +1,18 @@
-# Python
+# OS / Python
+.DS_Store
 __pycache__/
-*.pyc
-
-# Jupyter
+*.py[cod]
 .ipynb_checkpoints/
 
-# Sistema
-.DS_Store
-
-# Entornos virtuales
-venv/
+# Env
+.env
 .venv/
 env/
-repo_audit.txt
+
+# ML artifacts opcionales
+mlruns/
+*.log
+
+# DVC/cache
+.dvc/cache/
+.dvc/tmp/

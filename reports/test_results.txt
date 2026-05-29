@@ -1,0 +1,10 @@
+Validación rápida ejecutada en sandbox:
+
+- python -m py_compile src/*.py scripts/run_all.py api/*.py: OK
+- PYTHONPATH=. python scripts/run_all.py: OK
+- PYTHONPATH=. pytest -q: 2 passed
+
+Notas:
+- El entrenamiento completo sí fue ejecutado con muestra estratificada y parámetros compactos para laptop.
+- MLflow no queda obligatorio para que el flujo corra; si está instalado, run_all.py registra automáticamente en ./mlruns.
+- Se observaron warnings no bloqueantes de sklearn/lightgbm/shap; no impiden entrenamiento ni predicción.

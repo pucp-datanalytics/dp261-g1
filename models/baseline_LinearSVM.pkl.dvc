@@ -1,5 +1,0 @@
-outs:
-- md5: ec89d165af2989452efa6bfd273e79a1
-  size: 67366
-  hash: md5
-  path: baseline_LinearSVM.pkl

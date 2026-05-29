@@ -1,9 +1,7 @@
-# Recomendaciones finales - Sprint 5
+# Recomendaciones finales
 
-1. Avanzar a Sprint 6 con un MVP controlado del modelo final.
-2. Usar **LogisticRegression tuneado** como modelo base por balance entre desempeno, estabilidad e interpretabilidad.
-3. Adoptar **threshold 0.70** como umbral operativo inicial porque maximiza el business value bajo los supuestos confirmados.
-4. No automatizar rechazos sin validacion de negocio; usar el modelo como soporte a decision.
-5. Monitorear recall, precision, positive rate, business value y drift.
-6. Validar los supuestos economicos con sponsor antes de produccion.
-7. Usar `handoff/` como contrato tecnico para FastAPI, Docker, AWS y dashboard consumiendo API.
+- Desplegar el MVP como apoyo a decisión, no como reemplazo de revisión experta.
+- Usar el semáforo como lenguaje principal frente al usuario comercial.
+- Mantener threshold 0.5 para la entrega final, según la especificación corregida.
+- Revisar manualmente todos los casos rojos y una muestra de casos ámbar durante el primer mes.
+- Registrar el resultado real de cada vehículo comprado/rechazado para recalibrar el modelo.

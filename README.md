@@ -1,279 +1,137 @@
-# dp261-g1
+# DP261-G1 | Predicción de Bad Buys en subastas automotrices
 
-## GitHub Project
+Proyecto final end-to-end para clasificar vehículos usados con alto riesgo de ser una mala compra (`IsBadBuy=1`). La entrega incluye notebooks detallados, módulos reutilizables, pipeline completo, modelo final, API FastAPI, dashboard Streamlit, contratos y reportes.
 
-Tablero del proyecto: [dp261-g1 Project](https://github.com/orgs/pucp-datanalytics/projects/1)
+## Decisiones principales de la versión final
 
-## Labels
+- Target: `IsBadBuy` (`1 = Bad Buy`, `0 = Good Buy`).
+- Dataset original: `data/raw/06-kickAutomotriz.csv`.
+- El dataset está desbalanceado; por eso se usan `class_weight`, `scale_pos_weight` y balanceo controlado solo dentro de train/folds.
+- Fecha `PurchDate`: se transforma dentro del pipeline, no manualmente antes de entrenar.
+- Modelos Sprint 3: Logistic Regression, Decision Tree, Random Forest, SVM y KNN.
+- Modelos Sprint 4: XGBoost, LightGBM, Bagging, Voting y Stacking.
+- Optimización: RandomizedSearchCV + Optuna/TPE bayesiano.
+- Modelo final: se selecciona automáticamente en `scripts/run_all.py` por mayor valor de negocio; en la última corrida incluida quedó registrado en `models/model_metadata.json`.
+- Threshold final: `0.5`, según la especificación de entrega.
+- Función de negocio:
 
-Los labels del repositorio siguen una convencion de prefijos para organizar el trabajo:
+```text
+Valor = TP*2500 + TN*600 + FP*(-900) + FN*(-4500)
+```
 
-| Prefijo | Color | Descripcion |
-|---------|-------|-------------|
-| `scrum/` | `#0052CC` | `scrum/user-story`, `scrum/task`, `scrum/bug`, `scrum/backlog`, `scrum/in-progress`, `scrum/blocked`, `scrum/review`, `scrum/done` |
-| `crisp/` | `#006B75` | `crisp/sprint1-business-data-understanding`, `crisp/sprint2-data-preparation`, `crisp/sprint3-modeling-baseline`, `crisp/sprint4-modeling-advanced`, `crisp/sprint5-evaluation`, `crisp/sprint6-deployment` |
-| `rol/` | `#E65100` | `rol/pm`, `rol/ba`, `rol/de`, `rol/da`, `rol/pd` |
-| `entrega/` | `#5319E7` | `entrega/notebook`, `entrega/dataset`, `entrega/environment`, `entrega/dashboard`, `entrega/model`, `entrega/report`, `entrega/docs`, `entrega/api-rest`, `entrega/aws-deploy` |
-| `prioridad/` | `#B60205` | `prioridad/high`, `prioridad/medium`, `prioridad/low` |
+La penalización de FN es alta porque representa comprar un vehículo defectuoso creyendo que era bueno. Esta corrección responde directamente a la observación del profesor.
 
-### Detalle de Labels
+## Cómo ejecutar todo
 
-**`scrum/`**
+Desde la raíz del repositorio:
 
-| Label | Descripcion |
-|-------|-------------|
-| `scrum/user-story` | Historia de usuario |
-| `scrum/task` | Tarea técnica del sprint |
-| `scrum/bug` | Error o fallo en el entregable |
-| `scrum/backlog` | Pendiente en el product backlog |
-| `scrum/in-progress` | En desarrollo activo |
-| `scrum/blocked` | Bloqueado, requiere atención |
-| `scrum/review` | En revisión del equipo |
-| `scrum/done` | Completado y aprobado |
-
-**`crisp/`**
-
-| Label | Descripcion |
-|-------|-------------|
-| `crisp/sprint1-business-data-understanding` | Sprint 1: Business & Data Understanding |
-| `crisp/sprint2-data-preparation` | Sprint 2: Data Preparation |
-| `crisp/sprint3-modeling-baseline` | Sprint 3: Modeling baseline |
-| `crisp/sprint4-modeling-advanced` | Sprint 4: Modeling avanzado + tuning |
-| `crisp/sprint5-evaluation` | Sprint 5: Evaluation + Business Value |
-| `crisp/sprint6-deployment` | Sprint 6: Deployment MVP en AWS |
-
-**`rol/`**
-
-| Label | Descripcion |
-|-------|-------------|
-| `rol/pm` | Project Manager |
-| `rol/ba` | Business Analyst |
-| `rol/de` | Data Engineer |
-| `rol/da` | Data Analyst |
-| `rol/pd` | Prototype Developer |
-
-**`entrega/`**
-
-| Label | Descripcion |
-|-------|-------------|
-| `entrega/notebook` | Jupyter Notebook |
-| `entrega/dataset` | Conjunto de datos (DVC) |
-| `entrega/environment` | environment.yml / entorno Conda |
-| `entrega/dashboard` | Visualización / Dashboard interactivo |
-| `entrega/model` | Modelo entrenado y serializado |
-| `entrega/report` | Informe o presentación ejecutiva |
-| `entrega/docs` | Documentación del proyecto |
-| `entrega/api-rest` | API REST del modelo desplegada |
-| `entrega/aws-deploy` | Despliegue en AWS (EC2/Lambda/SageMaker) |
-
-**`prioridad/`**
-
-| Label | Descripcion |
-|-------|-------------|
-| `prioridad/high` | Prioridad alta |
-| `prioridad/medium` | Prioridad media |
-| `prioridad/low` | Prioridad baja |
-
-## Milestones
-
-| Sprint | Titulo | Fecha de entrega |
-|--------|--------|------------------|
-| 1 | Sprint 1 — Business & Data Understanding | 10/04/2026 |
-| 2 | Sprint 2 — Data Preparation | 17/04/2026 |
-| 3 | Sprint 3 — Modeling (Baseline) | 24/04/2026 |
-| 4 | Sprint 4 — Modeling (Avanzado + Tuning) | 08/05/2026 |
-| 5 | Sprint 5 — Evaluation + Business Value | 15/05/2026 |
-| 6 | Sprint 6 — Deployment MVP en AWS | 22/05/2026 |
-
-### Detalle de Milestones
-
-**Sprint 1 — Business & Data Understanding** (entrega: 10/04/2026)
-
-Miembros del Proyecto (cada S varían los roles)
-
-| Nombre | Rol |
-|--------|-----|
-| Pedro Shiguihara | Product Owner (P.O) |
-| Davida Ponce | Product Manager |
-| Freddy Nina | Business Analyst |
-|  Alexandra Lozano | Data Engineer |
-| Martin Bendezu | Data Analyst |
-| Oliver Malqui | Prototype Developer |
-
-*Objetivo: Comprender el problema de negocio y explorar los datos.*
-
-Entregables:
-- Repositorio GitHub configurado con board Kanban, Issues creados y asignados, README (PM)
-- 01_business.ipynb: problema de negocio, variable objetivo, KPIs y criterios de éxito (BA)
-- environment.yml + 02_data_loading.ipynb: entorno Conda, DVC configurado, carga y verificación de datos (DE)
-- 03_eda.ipynb: análisis de calidad, estadísticas descriptivas, visualizaciones y hallazgos (DA)
-- 04_prototype.ipynb: prototipo interactivo con ipywidgets (PD)
-
-
-
-<details>
-<summary><strong>Setup del proyecto</strong></summary>
-
-### Requisitos
-- Git
-- Miniconda o Anaconda
-- Google Drive for desktop
-- Acceso a la carpeta compartida de Drive: DVC-G1-Storage
-
-### 1. Clonar el repositorio
-git clone https://github.com/pucp-datanalytics/dp261-g1.git
-cd dp261-g1
-
-### 2. Crear y activar el entorno Conda
-Si el archivo se llama environment.yml:
+```bash
 conda env create -f environment.yml
 conda activate dp261-g1
+PYTHONPATH=. python scripts/run_all.py
+```
 
-Si el archivo se llama env.yml, usar:
-conda env create -f env.yml
-conda activate dp261-g1
+En Windows PowerShell:
 
-### 3. Registrar el kernel de Jupyter
-Esto ayuda a que VS Code/Jupyter reconozca correctamente el entorno.
-python -m ipykernel install --user --name dp261-g1 --display-name "Python (dp261-g1)"
+```powershell
+$env:PYTHONPATH="."
+python scripts/run_all.py
+```
 
-### 4. Configurar Google Drive Desktop
-1. Instalar Google Drive for desktop
-2. Iniciar sesión con la cuenta que tenga acceso a la carpeta compartida
-3. Verificar que la carpeta DVC-G1-Storage aparezca en Drive (link: https://drive.google.com/drive/folders/1plBl9DATtwC6qpNztwBsGbRsbFX8ZPHJ?usp=sharing)
-4. Obtener la ruta local de esa carpeta en la computadora
+El script genera o actualiza:
 
-Importante: La ruta será distinta en cada máquina y sistema operativo.
+- `data/processed/train_full.csv`
+- `data/processed/test_final.csv`
+- `data/processed/train_sample.csv`
+- `reports/model_results_summary.csv`
+- `reports/business_model_ranking.csv`
+- `reports/tuning_results.csv`
+- `reports/final_validation_metrics.csv`
+- `models/final_model.pkl`
+- `models/model_metadata.json`
+- `handoff/model/final_model.pkl`
+- `handoff/contracts/*.json`
 
-Ejemplo en Mac:
-/Users/usuario/Library/CloudStorage/GoogleDrive-correo@gmail.com/My Drive/DVC-G1-Storage
+Si `mlflow` está instalado, también registra el experimento en `mlruns/`.
 
-Ejemplo en Windows:
-G:\.shortcut-targets-by-id\...\DVC-G1-Storage
+## Estructura
 
-### 5. Configurar el remote de DVC
-Si es la primera vez en esa computadora:
-dvc remote add --local -d teamdrive "RUTA_LOCAL_A_DVC-G1-Storage"
+```text
+api/                  FastAPI + Docker + smoke test
+dashboard/            Streamlit comercial con semáforo
+data/raw/             dataset original
+data/processed/       splits generados train/test/sample
+handoff/contracts/    contratos de entrada/salida para Sprint 6
+handoff/model/        copia del modelo final y metadata
+models/               final_model.pkl + model_metadata.json
+notebooks/            flujo CRISP-DM documentado paso a paso
+reports/              resultados, ranking, reporte ejecutivo y figuras
+scripts/run_all.py    ejecución end-to-end reproducible
+src/                  preprocessing, modelos, tuning y evaluación
+tests/                pruebas del contrato API
+```
 
-Si el remote teamdrive ya existía:
-dvc remote modify --local teamdrive url "RUTA_LOCAL_A_DVC-G1-Storage"
-dvc remote default --local teamdrive
+## Notebooks principales
 
-Verificar: dvc remote list
+Los notebooks están escritos para explicar el proyecto a alguien que no conoce el código:
 
-Esta configuración se guarda en .dvc/config.local, por lo que es local por computadora y no debe subirse a GitHub.
+1. `01_business_understanding.ipynb`: problema, target, stakeholders, criterios de éxito y costo de errores.
+2. `02_data_loading.ipynb`: carga, esquema, tipos y primeras validaciones.
+3. `03_eda.ipynb`: EDA completo, balance, nulos, distribuciones, relaciones con target y hallazgos.
+4. `04_data_preparation_pipeline.ipynb`: limpieza, feature engineering, justificación de variables y balanceo.
+5. `05_baseline_models.ipynb`: modelos baseline pedidos en Sprint 3 y por qué se usan.
+6. `06_tuning_optuna.ipynb`: RandomizedSearchCV y Optuna/TPE.
+7. `07_advanced_ensembles.ipynb`: XGBoost, LightGBM, Bagging, Voting y Stacking.
+8. `08_business_value_final_selection.ipynb`: función económica y selección del modelo.
+9. `09_final_validation_mlflow.ipynb`: validación final, MLflow y artefactos.
+10. `10_api_dashboard_demo.ipynb`: API, dashboard y contratos para deployment.
 
-### 6. Descargar los datos con DVC
-dvc pull
+## Levantar API
 
-Esto materializa los archivos reales en el proyecto, por ejemplo: data/raw/06-kickAutomotriz.csv
+```bash
+uvicorn api.main:app --reload
+```
 
-### 7. Ejecutar Jupyter Lab
-jupyter lab
+Endpoints:
 
-Si usas VS Code:
-- seleccionar el intérprete dp261-g1
-- seleccionar el kernel Python (dp261-g1)
+- `GET /health`
+- `GET /version`
+- `POST /predict`
+- `POST /predict_batch`
 
-### 8. Orden recomendado de ejecución
-notebooks/01_business.ipynb
-notebooks/02_data_loading.ipynb
-notebooks/03_eda.ipynb
-notebooks/04_prototype.ipynb
+Probar:
 
-### Notas importantes
+```bash
+python api/smoke_test.py
+```
 
-1. **No volver a inicializar Git ni DVC**  
-   El repositorio ya viene inicializado, así que no se debe ejecutar nuevamente:
+## Levantar dashboard
 
-   - `git init`
-   - `dvc init`
+En otra terminal, con la API activa:
 
-2. **No agregar nuevamente el dataset si ya está rastreado**  
-   Esto solo lo hace quien incorpora un dataset nuevo al proyecto. No ejecutar:
+```bash
+streamlit run dashboard/app.py
+```
 
-   - `dvc add "data/raw/06-kickAutomotriz.csv"`
+El dashboard está orientado a usuario comercial: muestra semáforo, decisión, score de riesgo, valor económico del lote y variables explicativas.
 
-3. **El archivo CSV real no se sube a GitHub**  
-   Git sí versiona:
+## Docker
 
-   - `*.dvc`
-   - `dvc.yaml` / `dvc.lock` si existieran
-   - notebooks, código y documentación
+```bash
+docker build -f api/Dockerfile -t dp261-badbuy-api .
+docker run --rm -p 8000:8000 dp261-badbuy-api
+```
 
-   Git no debe subir:
+## Archivos clave para sustentar
 
-   - `data/raw/06-kickAutomotriz.csv`
-
-4. **El remote de DVC es local por máquina**  
-   Aunque todos usan la misma carpeta compartida de Drive, cada integrante debe configurar su propia ruta local una sola vez.
-
-5. **Flujo normal de trabajo**
-
-   ```bash
-   git pull
-   conda activate dp261-g1
-   dvc pull
-   jupyter lab
-
-</details>
-------------------------------------------------------
-------------------------------------------------------
-
-
-**Sprint 2 — Data Preparation** (entrega: 17/04/2026)
-
-Miembros del Proyecto (cada S varían los roles)
-
-| Nombre | Rol |
-|--------|-----|
-| Pedro Shiguihara | Product Owner (P.O) |
-| Alexandra Lozano | Product Manager |
-| Davida Ponce | Data Cleaner |
-| Oliver Malqui | Feature Engineer |
-| Martin Bendezu | Class Balancer |
-| Freddy Nina | Pipeline Builder |
-
-*Objetivo: Limpiar, transformar y construir features del dataset.*
-Entregables:
-- Pipeline de limpieza y transformación de datos
-- Ingeniería de características (feature engineering)
-- Dataset final listo para modelado versionado con DVC
-- Notebook documentado con cada decisión de preprocesamiento
-
-**Sprint 3 — Modeling (Baseline)** (entrega: 24/04/2026)
-
-Entrenar y comparar modelos de clasificación baseline.
-Entregables:
-- Notebook de experimentación con modelos baseline (Logistic Regression, Decision Tree, etc.)
-- Métricas comparativas: accuracy, precision, recall, F1, ROC-AUC
-- Selección del mejor modelo baseline con justificación
-- Registro de experimentos documentado
-
-**Sprint 4 — Modeling (Avanzado + Tuning)** (entrega: 08/05/2026)
-
-Optimizar hiperparámetros y aplicar modelos avanzados.
-Entregables:
-- Notebook con modelos avanzados (Random Forest, XGBoost, etc.)
-- Optimización de hiperparámetros (GridSearchCV / Optuna)
-- Comparativa final de modelos con métricas detalladas
-- Modelo final seleccionado y serializado (pickle/joblib)
-
-**Sprint 5 — Evaluation + Business Value** (entrega: 15/05/2026)
-
-Evaluar el Business Value y documentar resultados finales.
-Entregables:
-- Evaluación del modelo frente a los KPIs definidos en Sprint 1
-- Análisis de errores e interpretabilidad (SHAP, feature importance)
-- Dashboard interactivo con resultados para stakeholders
-- Informe ejecutivo con conclusiones y recomendaciones
-
-**Sprint 6 — Deployment MVP en AWS** (entrega: 22/05/2026)
-
-Desplegar el mejor modelo como MVP en AWS.
-Entregables:
-- API REST del modelo desplegada en AWS (EC2, Lambda o SageMaker)
-- Dashboard interactivo accesible en producción
-- Documentación de arquitectura y guía de uso
-- Demo funcional del MVP presentada al stakeholder
-
+- `reports/final_report.md`: resumen ejecutivo y resultados finales.
+- `reports/technical_change_log.md`: qué se corrigió frente a la versión anterior.
+- `reports/model_selection_rationale.md`: por qué se selecciona el modelo ganador.
+- `reports/business_model_ranking.csv`: selección del modelo por valor económico.
+- `reports/tuning_results.csv`: evidencia de RandomizedSearchCV y Optuna/TPE.
+- `reports/final_validation_metrics.csv`: validación final en test.
+- `src/preprocessing.py`: limpieza + feature engineering reutilizable.
+- `src/models.py`: modelos de Sprint 3 y Sprint 4.
+- `src/tuning.py`: optimización de hiperparámetros.
+- `api/main.py`: servicio FastAPI listo para Docker/AWS.
+- `dashboard/app.py`: interfaz comercial.
