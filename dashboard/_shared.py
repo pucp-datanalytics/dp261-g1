@@ -8,9 +8,12 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+import joblib
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -18,12 +21,16 @@ import requests
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 TARGET = "IsBadBuy"
 RAW_DATA_PATH = PROJECT_ROOT / "data" / "raw" / "06-kickAutomotriz.csv"
 DEFAULT_SAMPLE = PROJECT_ROOT / "data" / "processed" / "test_final.csv"
 METADATA_PATH = PROJECT_ROOT / "models" / "model_metadata.json"
 RANKING_PATH = PROJECT_ROOT / "reports" / "business_model_ranking.csv"
 FINAL_METRICS_PATH = PROJECT_ROOT / "reports" / "final_validation_metrics.csv"
+MODEL_PATH = PROJECT_ROOT / "models" / "final_model.pkl"
 
 RISK_STYLE = {
     "ROJO": {
@@ -71,6 +78,45 @@ VEHICLE_ID_COLUMNS = [
     "WarrantyCost",
     "VNST",
 ]
+
+
+FEATURE_FRIENDLY_NAMES = {
+    "VehOdo": "Kilometraje del vehículo",
+    "VehicleAge": "Antigüedad del vehículo",
+    "VehBCost": "Costo base de compra",
+    "WarrantyCost": "Costo de garantía",
+    "Auction": "Casa de subasta",
+    "Make": "Marca",
+    "Model": "Modelo",
+    "Size": "Tamaño / segmento",
+    "Nationality": "Procedencia / nacionalidad",
+    "TopThreeAmericanName": "Grupo de marca",
+    "MMRAcquisitionAuctionAveragePrice": "Precio MMR adquisición subasta",
+    "MMRAcquisitionAuctionCleanPrice": "Precio MMR clean adquisición",
+    "MMRAcquisitionRetailAveragePrice": "Precio MMR retail adquisición",
+    "MMRAcquisitonRetailCleanPrice": "Precio MMR retail clean adquisición",
+    "MMRCurrentAuctionAveragePrice": "Precio MMR actual subasta",
+    "MMRCurrentAuctionCleanPrice": "Precio MMR clean actual",
+    "MMRCurrentRetailAveragePrice": "Precio MMR retail actual",
+    "MMRCurrentRetailCleanPrice": "Precio MMR retail clean actual",
+    "PRIMEUNIT": "Indicador PRIMEUNIT",
+    "AUCGUART": "Indicador AUCGUART",
+    "VNST": "Estado de venta",
+    "IsOnlineSale": "Venta online",
+    "odo_per_year": "Kilometraje por año",
+    "old_high_mileage_flag": "Vehículo antiguo con alto kilometraje",
+    "cost_to_acq_auction_avg": "Costo vs. MMR adquisición",
+    "acq_auction_margin": "Margen frente a MMR adquisición",
+    "cost_to_current_auction_avg": "Costo vs. MMR actual",
+    "current_auction_margin": "Margen frente a MMR actual",
+    "warranty_to_cost": "Garantía como proporción del costo",
+    "warranty_per_vehicle_year": "Garantía por año de antigüedad",
+    "auction_avg_depreciation": "Depreciación estimada subasta",
+    "retail_avg_depreciation": "Depreciación estimada retail",
+    "acq_clean_avg_spread": "Spread adquisición clean vs. average",
+    "current_clean_avg_spread": "Spread actual clean vs. average",
+    "mmr_missing_count": "Precios MMR faltantes",
+}
 
 FEATURE_GROUPS = [
     {
@@ -404,20 +450,50 @@ def render_vehicle_chips(row: pd.Series) -> None:
 
 
 def factors_to_df(items: List[Dict[str, Any]]) -> pd.DataFrame:
+    """Convierte la explicación de la API en una tabla comercial.
+
+    `impact` es la influencia local de la variable en la predicción del vehículo:
+    - valor positivo: empuja hacia mayor riesgo de BadBuy;
+    - valor negativo: reduce el riesgo estimado;
+    - si la API usa fallback de importancia no firmada, se marca como factor relevante.
+    """
     if not items:
         return pd.DataFrame()
+
+    direction_labels = {
+        "sube_riesgo": "Aumenta riesgo",
+        "baja_riesgo": "Reduce riesgo",
+        "factor_relevante": "Factor relevante",
+    }
+
     rows = []
     for item in items:
+        impact = float(item.get("impact") or 0.0)
+        impact_abs = item.get("impact_abs")
+        impact_abs = abs(impact) if impact_abs is None else float(impact_abs)
+        direction_code = item.get("impact_direction", "factor_relevante")
+        direction = direction_labels.get(direction_code, str(direction_code))
+
+        if direction_code == "sube_riesgo":
+            lectura = "Empuja esta predicción hacia mayor riesgo."
+        elif direction_code == "baja_riesgo":
+            lectura = "Compensa la alerta y reduce el riesgo estimado."
+        else:
+            lectura = "Variable relevante para la evaluación del caso."
+
         rows.append(
             {
                 "Factor": item.get("display_name") or item.get("feature"),
                 "Valor del vehículo": item.get("value"),
-                "Relevancia": abs(float(item.get("impact_abs") or item.get("impact") or 0.0)),
-                "Lectura": item.get("impact_direction", "factor_relevante"),
+                "Influencia en riesgo": impact,
+                "Influencia absoluta": impact_abs,
+                "Dirección": direction,
+                "Lectura comercial": lectura,
                 "Detalle técnico": item.get("detail"),
             }
         )
-    return pd.DataFrame(rows).sort_values("Relevancia", ascending=False)
+
+    return pd.DataFrame(rows).sort_values("Influencia absoluta", ascending=False)
 
 
 def load_default_sample() -> pd.DataFrame:
@@ -765,7 +841,7 @@ def render_presentation_dashboard() -> None:
 # Vista 2: Dashboard comercial operativo
 # =============================================================================
 
-def render_commercial_dashboard(api_error: str | None) -> None:
+def _render_commercial_evaluation(api_error: str | None) -> None:
     st.markdown('<div class="main-title">🚦 Semáforo comercial de riesgo de compra</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="subtitle">Herramienta para decidir rápidamente si un vehículo puede continuar, requiere revisión manual o debe detenerse por alto riesgo.</div>',
@@ -808,7 +884,7 @@ def render_commercial_dashboard(api_error: str | None) -> None:
     if api_error:
         st.error("No se pudo conectar con la API. Primero levanta Docker/FastAPI y vuelve a cargar el dashboard.")
         st.caption(api_error)
-        st.stop()
+        return
 
     st.subheader("Carga de datos")
     col_upload, col_limit = st.columns([2.2, 0.8])
@@ -826,7 +902,7 @@ def render_commercial_dashboard(api_error: str | None) -> None:
 
     if df.empty:
         st.warning("Sube un CSV o activa la muestra local para iniciar la evaluación.")
-        st.stop()
+        return
 
     with st.expander("Vista previa del archivo cargado", expanded=False):
         st.dataframe(df.head(10), use_container_width=True)
@@ -838,7 +914,7 @@ def render_commercial_dashboard(api_error: str | None) -> None:
         pred = st.session_state.get("pred", pd.DataFrame())
 
     if pred.empty:
-        st.stop()
+        return
 
     # Summary cards
     rojos = int((pred["risk_segment"] == "ROJO").sum())
@@ -926,24 +1002,58 @@ def render_commercial_dashboard(api_error: str | None) -> None:
         render_vehicle_chips(selected_row)
 
     with right:
-        st.markdown("**Factores que explican la alerta**")
+        st.markdown("**Factores que más influyeron en esta predicción**")
+        st.caption(
+            "La influencia es local para el vehículo seleccionado. Valores positivos aumentan el riesgo estimado; valores negativos lo reducen."
+        )
         items = selected_row.get("Factores clave", [])
         factors = factors_to_df(items)
         if not factors.empty:
+            plot_df = factors.head(5).copy()
             fig2 = px.bar(
-                factors.head(5),
-                x="Relevancia",
+                plot_df,
+                x="Influencia en riesgo",
                 y="Factor",
                 orientation="h",
+                color="Dirección",
                 text="Valor del vehículo",
-                title="Top factores del vehículo seleccionado",
+                title="Influencia local de variables en el vehículo seleccionado",
+                color_discrete_map={
+                    "Aumenta riesgo": "#dc2626",
+                    "Reduce riesgo": "#16a34a",
+                    "Factor relevante": "#64748b",
+                },
             )
-            fig2.update_layout(height=330, margin=dict(l=10, r=10, t=50, b=10), yaxis={"categoryorder": "total ascending"})
+            fig2.add_vline(x=0, line_width=1, line_dash="dash", line_color="#334155")
+            fig2.update_layout(
+                height=350,
+                margin=dict(l=10, r=10, t=50, b=10),
+                yaxis={"categoryorder": "total ascending"},
+                xaxis_title="Influencia sobre score de riesgo",
+                yaxis_title="Factor",
+            )
             st.plotly_chart(fig2, use_container_width=True)
-            st.dataframe(factors[["Factor", "Valor del vehículo", "Lectura"]], hide_index=True, use_container_width=True)
-            st.caption(
-                "La relevancia muestra qué variables pesaron más en la evaluación. Si el método es fallback de importancia, la dirección exacta se interpreta con cautela."
-            )
+
+            table_cols = [
+                "Factor",
+                "Valor del vehículo",
+                "Influencia en riesgo",
+                "Dirección",
+                "Lectura comercial",
+            ]
+            table = factors[table_cols].copy()
+            table["Influencia en riesgo"] = table["Influencia en riesgo"].map(lambda x: f"{x:+.4f}")
+            st.dataframe(table, hide_index=True, use_container_width=True)
+
+            method = selected_row.get("Método explicación")
+            if method and "fallback" in str(method):
+                st.caption(
+                    "Método de explicación fallback: muestra factores relevantes, pero la dirección puede ser aproximada."
+                )
+            else:
+                st.caption(
+                    "Método de explicación local compatible con SHAP: la dirección indica si el factor aumenta o reduce el riesgo estimado."
+                )
         else:
             st.info("La API no devolvió factores explicativos para este caso. Revisar configuración de SHAP/fallback en la API.")
 
@@ -956,3 +1066,325 @@ def render_commercial_dashboard(api_error: str | None) -> None:
             st.json(selected_row.get("raw_response", {}))
 
 
+
+
+# =============================================================================
+# Vista 3: Análisis global del modelo para el dashboard comercial
+# =============================================================================
+
+@st.cache_resource(show_spinner=False)
+def load_final_model() -> Any:
+    """Carga el modelo final para análisis global en Streamlit."""
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(f"No se encontró el modelo final en {MODEL_PATH}")
+    return joblib.load(MODEL_PATH)
+
+
+def _features_step(model: Any) -> Any:
+    return model.named_steps.get("features") if hasattr(model, "named_steps") else None
+
+
+def _preprocess_step(model: Any) -> Any:
+    return model.named_steps.get("preprocess") if hasattr(model, "named_steps") else None
+
+
+def _classifier_step(model: Any) -> Any:
+    return model.named_steps.get("clf") if hasattr(model, "named_steps") else model
+
+
+def _as_dense(matrix: Any) -> np.ndarray:
+    return matrix.toarray() if hasattr(matrix, "toarray") else np.asarray(matrix)
+
+
+def _extract_class1_shap_values(values: Any, n_rows: int, n_features: int) -> np.ndarray:
+    """Normaliza outputs de SHAP a matriz (n_rows, n_features) para clase 1."""
+    if isinstance(values, list):
+        values = values[-1]
+
+    arr = np.asarray(values)
+
+    if arr.ndim == 3:
+        # shap reciente: (n_rows, n_features, n_classes)
+        if arr.shape[0] == n_rows and arr.shape[1] == n_features:
+            return arr[:, :, -1].astype(float)
+        # alternativa: (n_classes, n_rows, n_features)
+        if arr.shape[1] == n_rows and arr.shape[2] == n_features:
+            return arr[-1, :, :].astype(float)
+
+    if arr.ndim == 2:
+        if arr.shape == (n_rows, n_features):
+            return arr.astype(float)
+        if arr.shape == (n_features, n_rows):
+            return arr.T.astype(float)
+
+    raise ValueError(f"Formato SHAP no esperado: {arr.shape}")
+
+
+def _base_feature_name(transformed_feature: str) -> str:
+    """Agrupa nombres técnicos de ColumnTransformer/OHE a variables de negocio."""
+    name = str(transformed_feature)
+    if "__" in name:
+        name = name.split("__", 1)[1]
+    if name in FEATURE_FRIENDLY_NAMES:
+        return name
+    for prefix in sorted(FEATURE_FRIENDLY_NAMES, key=len, reverse=True):
+        if name.startswith(prefix + "_"):
+            return prefix
+    return name
+
+
+def _prepare_model_matrix(model: Any, sample: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray, list[str], Any]:
+    """Devuelve muestra cruda, matriz transformada, nombres transformados y clasificador."""
+    metadata = read_json(str(METADATA_PATH))
+    raw_features = metadata.get("raw_features") or [c for c in sample.columns if c != TARGET]
+    cols = [c for c in raw_features if c in sample.columns]
+    X_raw = sample[cols].copy()
+
+    features = _features_step(model)
+    preprocess = _preprocess_step(model)
+    clf = _classifier_step(model)
+
+    X_features = features.transform(X_raw) if features is not None else X_raw
+    if not isinstance(X_features, pd.DataFrame):
+        X_features = pd.DataFrame(X_features)
+
+    if preprocess is not None:
+        transformed = preprocess.transform(X_features)
+        try:
+            names = [str(x) for x in preprocess.get_feature_names_out()]
+        except Exception:
+            names = [f"feature_{i}" for i in range(_as_dense(transformed).shape[1])]
+    else:
+        transformed = X_features
+        names = [str(c) for c in X_features.columns]
+
+    return X_features, _as_dense(transformed), names, clf
+
+
+def _bagging_global_shap(clf: Any, X_dense: np.ndarray, max_estimators: int) -> tuple[np.ndarray | None, str]:
+    """Calcula SHAP global promediando árboles internos de Bagging."""
+    if not hasattr(clf, "estimators_"):
+        return None, "not_bagging"
+
+    try:
+        import shap  # type: ignore
+    except Exception as exc:
+        return None, f"shap_not_available: {exc}"
+
+    n_rows, n_features = X_dense.shape
+    estimators_features = getattr(clf, "estimators_features_", None)
+    total = np.zeros((n_rows, n_features), dtype=float)
+    valid = 0
+
+    for idx, estimator in enumerate(clf.estimators_[:max_estimators]):
+        try:
+            selected = (
+                np.asarray(estimators_features[idx], dtype=int)
+                if estimators_features is not None
+                else np.arange(n_features, dtype=int)
+            )
+            X_sub = X_dense[:, selected]
+            explainer = shap.TreeExplainer(estimator)
+            values = explainer.shap_values(X_sub)
+            shap_sub = _extract_class1_shap_values(values, n_rows=n_rows, n_features=len(selected))
+            mapped = np.zeros((n_rows, n_features), dtype=float)
+            mapped[:, selected] = shap_sub
+            total += mapped
+            valid += 1
+        except Exception:
+            continue
+
+    if valid == 0:
+        return None, "bagging_shap_failed"
+    return total / valid, f"bagging_tree_shap_average_{valid}_estimators"
+
+
+def _direct_global_shap(clf: Any, X_dense: np.ndarray) -> tuple[np.ndarray | None, str]:
+    """Calcula SHAP directo para modelos compatibles con TreeExplainer."""
+    try:
+        import shap  # type: ignore
+
+        explainer = shap.TreeExplainer(clf)
+        values = explainer.shap_values(X_dense)
+        return _extract_class1_shap_values(values, X_dense.shape[0], X_dense.shape[1]), "shap.TreeExplainer"
+    except Exception as exc:
+        return None, f"shap_failed: {exc}"
+
+
+@st.cache_data(show_spinner=False)
+def compute_global_shap_report(sample_size: int = 150, max_estimators: int = 30) -> Dict[str, Any]:
+    """Calcula un reporte SHAP global sobre una muestra del test final."""
+    if not DEFAULT_SAMPLE.exists():
+        return {"error": f"No se encontró muestra en {DEFAULT_SAMPLE}"}
+
+    sample = pd.read_csv(DEFAULT_SAMPLE).head(max(sample_size, 1)).copy()
+    if sample.empty:
+        return {"error": "La muestra de evaluación está vacía."}
+
+    model = load_final_model()
+    X_features, X_dense, transformed_names, clf = _prepare_model_matrix(model, sample)
+
+    shap_values, method = _bagging_global_shap(clf, X_dense, max_estimators=max_estimators)
+    if shap_values is None:
+        shap_values, method = _direct_global_shap(clf, X_dense)
+
+    if shap_values is None:
+        # Fallback global: importancias del clasificador. No es SHAP, pero evita vista vacía.
+        return {"error": f"No se pudo calcular SHAP global ({method}). Verificar instalación de shap y compatibilidad del modelo."}
+
+    base_names = [_base_feature_name(name) for name in transformed_names]
+    unique_bases = list(dict.fromkeys(base_names))
+
+    # Agregación de columnas transformadas al nivel de variable de negocio.
+    shap_grouped = np.zeros((shap_values.shape[0], len(unique_bases)), dtype=float)
+    value_grouped = np.zeros((shap_values.shape[0], len(unique_bases)), dtype=float)
+
+    for group_idx, base in enumerate(unique_bases):
+        indices = [i for i, b in enumerate(base_names) if b == base]
+        shap_grouped[:, group_idx] = shap_values[:, indices].sum(axis=1)
+
+        if base in X_features.columns and pd.api.types.is_numeric_dtype(X_features[base]):
+            raw_values = pd.to_numeric(X_features[base], errors="coerce").fillna(0).to_numpy(dtype=float)
+            value_grouped[:, group_idx] = raw_values
+        else:
+            # Para categóricas/OHE se usa activación agregada de columnas transformadas.
+            value_grouped[:, group_idx] = np.abs(X_dense[:, indices]).sum(axis=1)
+
+    mean_abs = np.mean(np.abs(shap_grouped), axis=0)
+    order = np.argsort(mean_abs)[::-1]
+    top_order = order[:12]
+
+    importance_rows = []
+    for idx in top_order:
+        base = unique_bases[idx]
+        importance_rows.append(
+            {
+                "Variable": FEATURE_FRIENDLY_NAMES.get(base, base),
+                "Variable técnica": base,
+                "Impacto medio absoluto": float(mean_abs[idx]),
+                "Impacto promedio": float(np.mean(shap_grouped[:, idx])),
+            }
+        )
+
+    bees_rows = []
+    for idx in top_order:
+        base = unique_bases[idx]
+        display = FEATURE_FRIENDLY_NAMES.get(base, base)
+        values = value_grouped[:, idx]
+        v_min, v_max = float(np.nanmin(values)), float(np.nanmax(values))
+        if np.isclose(v_min, v_max):
+            norm = np.full_like(values, 0.5, dtype=float)
+        else:
+            norm = (values - v_min) / (v_max - v_min)
+        for shap_value, raw_value, norm_value in zip(shap_grouped[:, idx], values, norm):
+            bees_rows.append(
+                {
+                    "Variable": display,
+                    "Impacto SHAP": float(shap_value),
+                    "Valor normalizado": float(norm_value),
+                    "Valor usado": float(raw_value) if np.isfinite(raw_value) else None,
+                }
+            )
+
+    return {
+        "method": method,
+        "sample_size": int(len(sample)),
+        "importance": importance_rows,
+        "beeswarm": bees_rows,
+    }
+
+
+def render_model_analysis_view() -> None:
+    """Vista técnica separada con SHAP global del modelo."""
+    st.markdown('<div class="main-title">🔎 Análisis global del modelo</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="subtitle">Interpretabilidad del modelo final a nivel global. Esta vista explica qué variables influyen más en el comportamiento general del modelo.</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <div class="callout">
+        <b>Lectura:</b> cada punto representa un vehículo de la muestra de evaluación. La posición horizontal indica cuánto empuja una variable la predicción hacia mayor o menor riesgo de BadBuy. El color resume si el valor de esa variable es bajo o alto dentro de la muestra.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    c1, c2, c3 = st.columns([1, 1, 1.2])
+    with c1:
+        sample_size = st.slider("Vehículos para análisis", min_value=50, max_value=500, value=150, step=50)
+    with c2:
+        max_estimators = st.slider("Árboles internos a promediar", min_value=5, max_value=100, value=30, step=5)
+    with c3:
+        st.caption("A mayor muestra y más árboles, el análisis es más estable pero puede tardar más.")
+
+    with st.spinner("Calculando análisis global del modelo..."):
+        report = compute_global_shap_report(sample_size=sample_size, max_estimators=max_estimators)
+
+    if report.get("error"):
+        st.warning(report["error"])
+        st.info("El dashboard comercial sigue funcionando. Esta sección requiere que `shap` esté instalado y que el modelo sea compatible con TreeExplainer o con explicación promedio de Bagging.")
+        return
+
+    st.caption(f"Método de explicación: `{report.get('method')}` · muestra usada: {report.get('sample_size')} vehículos")
+
+    bees_df = pd.DataFrame(report.get("beeswarm", []))
+    importance_df = pd.DataFrame(report.get("importance", []))
+
+    if bees_df.empty or importance_df.empty:
+        st.info("No se generaron datos suficientes para graficar el análisis global.")
+        return
+
+    fig_bees = px.scatter(
+        bees_df,
+        x="Impacto SHAP",
+        y="Variable",
+        color="Valor normalizado",
+        color_continuous_scale=["#f59e0b", "#7c3aed"],
+        opacity=0.72,
+        title="SHAP global del modelo final",
+        labels={"Valor normalizado": "Valor de variable"},
+    )
+    fig_bees.add_vline(x=0, line_width=1, line_dash="dash", line_color="#334155")
+    fig_bees.update_layout(
+        height=560,
+        margin=dict(l=10, r=10, t=60, b=20),
+        yaxis={"categoryorder": "array", "categoryarray": importance_df["Variable"].iloc[::-1].tolist()},
+    )
+    st.plotly_chart(fig_bees, use_container_width=True)
+
+    left, right = st.columns([1, 1])
+    with left:
+        fig_imp = px.bar(
+            importance_df.sort_values("Impacto medio absoluto"),
+            x="Impacto medio absoluto",
+            y="Variable",
+            orientation="h",
+            title="Importancia global promedio",
+        )
+        fig_imp.update_layout(height=430, margin=dict(l=10, r=10, t=55, b=10))
+        st.plotly_chart(fig_imp, use_container_width=True)
+    with right:
+        st.markdown("**Top variables globales**")
+        table = importance_df.copy()
+        table["Impacto medio absoluto"] = table["Impacto medio absoluto"].map(lambda x: f"{x:.5f}")
+        table["Impacto promedio"] = table["Impacto promedio"].map(lambda x: f"{x:+.5f}")
+        st.dataframe(table, use_container_width=True, hide_index=True)
+
+    st.markdown(
+        """
+        **Diferencia frente a la explicación local del semáforo:**  
+        - Esta vista resume el comportamiento general del modelo sobre una muestra.  
+        - La explicación local del dashboard comercial muestra por qué un vehículo específico salió verde, ámbar o rojo.
+        """
+    )
+
+
+def render_commercial_dashboard(api_error: str | None) -> None:
+    """Renderiza el dashboard comercial con una vista separada de análisis del modelo."""
+    tab_commercial, tab_model = st.tabs(["🚦 Evaluación comercial", "🔎 Análisis del modelo"])
+    with tab_commercial:
+        _render_commercial_evaluation(api_error)
+    with tab_model:
+        render_model_analysis_view()
