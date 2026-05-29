@@ -1,0 +1,2 @@
+MLflow no se ejecutó en este entorno: No module named 'mlflow'
+Instalar mlflow y correr `python scripts/run_all.py` para registrar el experimento.

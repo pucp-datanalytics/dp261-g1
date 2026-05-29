@@ -1,8 +1,0 @@
-{
-  "model_name": "HistGradientBoosting",
-  "threshold": 0.09,
-  "score_type": "predict_proba",
-  "priority": "recall_then_f2_then_precision",
-  "model_path": "c:\\Users\\PONCE\\dp261-g1\\models\\tuned_HistGradientBoosting.pkl",
-  "ranking_path": "c:\\Users\\PONCE\\dp261-g1\\reports\\final_model_ranking_recall_first_with_threshold.csv"
-}

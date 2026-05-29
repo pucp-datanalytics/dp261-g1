@@ -1,29 +1,38 @@
+"""Configuración central del proyecto DP261 - Bad Buy Automotriz.
+
+La clase positiva es `IsBadBuy = 1`: vehículo defectuoso / mala compra.
+La selección final del modelo se hace con una función económica sobre la matriz
+ de confusión usando threshold estándar 0.5, según la observación de la entrega final.
+"""
 from pathlib import Path
 
-RANDOM_STATE = 42
-TARGET = "IsBadBuy"
-SAMPLE_SIZE = 20000          # baja a 8000-12000 si SVM/KNN demora en tu laptop
-TEST_SIZE = 0.20
-CV_SPLITS = 5                # exigido para comparación robusta; baja a 3 solo para pruebas rápidas
-
-PROJECT_ROOT = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
-DATA_RAW_CSV = PROJECT_ROOT / "data" / "raw" / "06-kickAutomotriz.csv"
-DATA_RAW_XLSX = PROJECT_ROOT / "data" / "raw" / "06-kickAutomotriz.xlsx"
-
-INTERIM_DIR = PROJECT_ROOT / "data" / "interim"
-PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data"
+RAW_DATA_PATH = DATA_DIR / "raw" / "06-kickAutomotriz.csv"
+INTERIM_DIR = DATA_DIR / "interim"
+PROCESSED_DIR = DATA_DIR / "processed"
 MODELS_DIR = PROJECT_ROOT / "models"
 REPORTS_DIR = PROJECT_ROOT / "reports"
+FIGURES_DIR = REPORTS_DIR / "figures"
 
-# En este proyecto se definió que el falso negativo duele más:
-# FN = auto malo marcado como buena compra => se acepta/compra una unidad riesgosa.
-# Por ello, la selección de modelos y thresholds prioriza recall y F2.
-PRIMARY_METRIC = "recall"
-SECONDARY_METRIC = "f2"
-CONTROL_METRIC = "precision"
+TARGET = "IsBadBuy"
+RANDOM_STATE = 42
+TEST_SIZE = 0.20
+# Muestra estratificada para experimentación. El modelo final se reentrena con todo el train.
+SAMPLE_SIZE = 3000
+CV_SPLITS = 2
 
-# Supuestos iniciales para Sprint 5. Cámbialos si el negocio define otros costos.
-BENEFIT_TP = 2500   # Ahorro por no comprar un Bad Buy
-COST_FP = -900      # Margen perdido por rechazar un auto bueno
-COST_FN = -2500     # Pérdida real por comprar un Bad Buy (Garantía + Reparación)
-BENEFIT_TN = 900    # Margen neto por vender un auto bueno
+# Búsqueda controlada para laptops de estudiantes.
+RANDOM_SEARCH_ITER = 2
+OPTUNA_TRIALS = 2
+
+# Ecuación de valor de negocio, aplicada con threshold estándar 0.5.
+# TP: detectamos Bad Buy y evitamos una compra defectuosa.
+# TN: aprobamos correctamente un buen vehículo y capturamos margen operativo.
+# FP: rechazamos un buen vehículo y perdemos oportunidad comercial.
+# FN: compramos un Bad Buy sin detectarlo; es el error más costoso.
+BENEFIT_TP = 2500
+BENEFIT_TN = 600
+COST_FP = -900
+COST_FN = -4500
+BUSINESS_THRESHOLD = 0.50

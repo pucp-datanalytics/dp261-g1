@@ -1,212 +1,142 @@
+"""Utilidades de optimización de hiperparámetros.
+
+Se implementan dos enfoques pedidos en Sprint 4:
+1. RandomizedSearchCV: exploración rápida de espacios grandes.
+2. Optuna / optimización bayesiana TPE: refinamiento inteligente de LightGBM.
+
+Todos los objetos tuneados son pipelines completos, por lo que el preprocesamiento
+se ajusta dentro de cada fold y se evita data leakage.
+"""
+from __future__ import annotations
+
 import time
+from typing import Any
 
-import joblib
 import numpy as np
-from scipy.stats import randint, loguniform, uniform
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier, StackingClassifier, VotingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import RandomizedSearchCV, cross_validate
-from sklearn.pipeline import Pipeline
-from sklearn.tree import DecisionTreeClassifier
+import pandas as pd
+from scipy.stats import randint, uniform, loguniform
+from sklearn.metrics import fbeta_score, make_scorer
+from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 
-from src.config import MODELS_DIR, RANDOM_STATE
-from src.models import get_cv, get_scoring
-from src.preprocessing import build_preprocessor
-from sklearn.svm import LinearSVC
+from src.config import OPTUNA_TRIALS, RANDOM_SEARCH_ITER, RANDOM_STATE
+from src.models import class_ratio, get_cv, make_model_pipeline
 
-def recall_refit(cv_results):
-    recall = np.nan_to_num(cv_results["mean_test_recall"], nan=-np.inf)
-    f2 = np.nan_to_num(cv_results["mean_test_f2"], nan=-np.inf)
-    precision = np.nan_to_num(cv_results["mean_test_precision"], nan=-np.inf)
-    ranking = np.lexsort((-precision, -f2, -recall))
-    return int(ranking[0])
+F2_SCORER = make_scorer(fbeta_score, beta=2, zero_division=0)
 
 
-def build_candidate_pipeline(model_name, X):
-    model_name = model_name.lower()
-
-    if "hist" in model_name:
-        from sklearn.ensemble import HistGradientBoostingClassifier
-        return Pipeline([
-            ("preprocess", build_preprocessor(X, mode="ordinal")), # Boosting prefiere ordinal
-            ("clf", HistGradientBoostingClassifier(random_state=RANDOM_STATE)),
-        ])
-
-    if "logistic" in model_name:
-        return Pipeline([
-            ("preprocess", build_preprocessor(X, mode="linear")),
-            ("clf", LogisticRegression(max_iter=1500, random_state=RANDOM_STATE)),
-        ])
-
-    if "linearsvm" in model_name or "linear_svm" in model_name or "svm" in model_name:
-        return Pipeline([
-            ("preprocess", build_preprocessor(X, mode="linear")),
-            ("clf", LinearSVC(max_iter=5000, random_state=RANDOM_STATE)),
-        ])
-
-    if "decisiontree" in model_name or "decision_tree" in model_name or "tree" in model_name:
-        return Pipeline([
-            ("preprocess", build_preprocessor(X, mode="tree_ohe")),
-            ("clf", DecisionTreeClassifier(random_state=RANDOM_STATE)),
-        ])
-
-    if "randomforest" in model_name or "random_forest" in model_name:
-        return Pipeline([
-            ("preprocess", build_preprocessor(X, mode="tree_ohe")),
-            ("clf", RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1)),
-        ])
-
-    if "gradient" in model_name:
-        return Pipeline([
-            ("preprocess", build_preprocessor(X, mode="ordinal")),
-            ("clf", GradientBoostingClassifier(random_state=RANDOM_STATE)),
-        ])
-
-    raise ValueError(f"No hay pipeline definido para {model_name}")
-
-def get_param_distributions(model_name):
-    model_name = model_name.lower()
-
-    if "logistic" in model_name:
-        return {
-            "clf__C": loguniform(0.01, 20),
-            "clf__class_weight": [None, "balanced"],
-        }
-
-    if "linearsvm" in model_name or "linear_svm" in model_name or "svm" in model_name:
-        return {
-            "clf__C": loguniform(0.01, 20),
-            "clf__class_weight": [None, "balanced"],
-        }
-
-    if "decisiontree" in model_name or "decision_tree" in model_name or "tree" in model_name:
-        return {
-            "clf__criterion": ["gini", "entropy"],
-            "clf__max_depth": [None, 3, 5, 8, 12, 16],
-            "clf__min_samples_leaf": randint(1, 30),
-            "clf__min_samples_split": randint(2, 40),
-            "clf__class_weight": [None, "balanced"],
-        }
-
-    if "randomforest" in model_name or "random_forest" in model_name:
-        return {
-            "clf__n_estimators": randint(80, 250),
-            "clf__max_depth": [None, 5, 8, 12, 16],
-            "clf__min_samples_leaf": randint(1, 20),
-            "clf__min_samples_split": randint(2, 30),
-            "clf__class_weight": [None, "balanced_subsample"],
-        }
-
-    if "gradient" in model_name:
-        return {
-            "clf__n_estimators": randint(80, 250),
-            "clf__learning_rate": loguniform(0.02, 0.2),
-            "clf__max_depth": randint(2, 5),
-            "clf__min_samples_leaf": randint(5, 40),
-            "clf__subsample": uniform(0.65, 0.35),
-        }
-
-    return {}
-
-
-def randomized_tune(model_name, X, y, n_iter=20, n_jobs=1, cv=None):
-    pipe = build_candidate_pipeline(model_name, X)
-    cv = cv or get_cv()
-
+def tune_with_random_search(name: str, pipe, param_distributions: dict, X, y, n_iter: int = RANDOM_SEARCH_ITER) -> tuple[Any, dict]:
+    """Ejecuta RandomizedSearchCV con métrica F2 para priorizar recall de clase 1."""
+    start = time.time()
     search = RandomizedSearchCV(
         estimator=pipe,
-        param_distributions=get_param_distributions(model_name),
+        param_distributions=param_distributions,
         n_iter=n_iter,
-        scoring=get_scoring(),
-        refit=recall_refit,
-        cv=cv,
+        scoring=F2_SCORER,
+        cv=get_cv(),
+        n_jobs=1,
         random_state=RANDOM_STATE,
-        n_jobs=n_jobs,
-        verbose=1,
-        return_train_score=True,
-        error_score=np.nan,
+        verbose=0,
+        error_score="raise",
     )
-
-    start = time.time()
     search.fit(X, y)
-    elapsed = time.time() - start
-
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    path = MODELS_DIR / f"tuned_{model_name}.pkl"
-    joblib.dump(search.best_estimator_, path)
-
-    best_idx = search.best_index_
-    cv_results = search.cv_results_
-
-    return {
-        "model": model_name,
-        "best_index": int(best_idx),
+    row = {
+        "model": name,
+        "tuning_method": "RandomizedSearchCV",
+        "best_cv_f2": float(search.best_score_),
         "best_params": search.best_params_,
-        "best_recall": cv_results["mean_test_recall"][best_idx],
-        "best_f2": cv_results["mean_test_f2"][best_idx],
-        "best_precision": cv_results["mean_test_precision"][best_idx],
-        "best_f1": cv_results["mean_test_f1"][best_idx],
-        "best_f05": cv_results["mean_test_f05"][best_idx],
-        "best_roc_auc": cv_results["mean_test_roc_auc"][best_idx],
-        "best_average_precision": cv_results["mean_test_average_precision"][best_idx],
-        "train_recall": cv_results["mean_train_recall"][best_idx],
-        "train_f2": cv_results["mean_train_f2"][best_idx],
-        "recall_gap_train_minus_cv": cv_results["mean_train_recall"][best_idx] - cv_results["mean_test_recall"][best_idx],
-        "f2_gap_train_minus_cv": cv_results["mean_train_f2"][best_idx] - cv_results["mean_test_f2"][best_idx],
-        "seconds": round(elapsed, 1),
-        "path": str(path),
-    }, search
+        "seconds": round(time.time() - start, 1),
+    }
+    return search.best_estimator_, row
 
 
-def optuna_tune_gradient_boosting(X, y, n_trials=20):
+def tune_lightgbm_with_optuna(X_raw, X, y, n_trials: int = OPTUNA_TRIALS) -> tuple[Any, dict]:
+    """Optimización bayesiana TPE con Optuna para LightGBM.
+
+    Se tunean hiperparámetros que controlan complejidad, tasa de aprendizaje,
+    regularización y muestreo. El objetivo maximiza F2 en CV porque el costo FN
+    es mayor que el costo FP.
+    """
     import optuna
+    from lightgbm import LGBMClassifier
 
+    ratio = class_ratio(y)
     cv = get_cv()
+    start = time.time()
 
     def objective(trial):
         params = {
-            "n_estimators": trial.suggest_int("n_estimators", 80, 300),
-            "learning_rate": trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
-            "max_depth": trial.suggest_int("max_depth", 2, 4),
-            "min_samples_leaf": trial.suggest_int("min_samples_leaf", 5, 50),
-            "subsample": trial.suggest_float("subsample", 0.65, 1.0),
+            "n_estimators": trial.suggest_int("n_estimators", 30, 80),
+            "max_depth": trial.suggest_int("max_depth", 3, 8),
+            "learning_rate": trial.suggest_float("learning_rate", 0.015, 0.15, log=True),
+            "num_leaves": trial.suggest_int("num_leaves", 12, 48),
+            "min_child_samples": trial.suggest_int("min_child_samples", 20, 120),
+            "subsample": trial.suggest_float("subsample", 0.65, 0.95),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.65, 0.95),
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-4, 1.0, log=True),
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-4, 3.0, log=True),
+            "scale_pos_weight": ratio,
+            "random_state": RANDOM_STATE,
+            "n_jobs": 1,
+            "verbose": -1,
         }
-        pipe = Pipeline([
-            ("preprocess", build_preprocessor(X, mode="ordinal")),
-            ("clf", GradientBoostingClassifier(**params, random_state=RANDOM_STATE)),
-        ])
-        scores = cross_validate(pipe, X, y, cv=cv, scoring=get_scoring(), n_jobs=1)
-        recall = scores["test_recall"].mean()
-        f2 = scores["test_f2"].mean()
-        precision = scores["test_precision"].mean()
-        return recall + 1e-3 * f2 + 1e-6 * precision
+        clf = LGBMClassifier(**params)
+        pipe = make_model_pipeline(X_raw, "ordinal", clf)
+        score = cross_val_score(pipe, X, y, scoring=F2_SCORER, cv=cv, n_jobs=1).mean()
+        return float(score)
 
-    study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=n_trials)
-
-    best_pipe = Pipeline([
-        ("preprocess", build_preprocessor(X, mode="ordinal")),
-        ("clf", GradientBoostingClassifier(**study.best_params, random_state=RANDOM_STATE)),
-    ])
-    best_pipe.fit(X, y)
-
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    path = MODELS_DIR / "tuned_gradient_boosting_optuna.pkl"
-    joblib.dump(best_pipe, path)
-
-    return study, best_pipe, path
-
-
-def build_simple_ensembles(fitted_estimators, X=None):
-    estimators = [(name, model) for name, model in fitted_estimators.items()]
-    if len(estimators) < 2:
-        return {}
-
-    return {
-        "Voting_hard": VotingClassifier(estimators=estimators, voting="hard"),
-        "Stacking_lr": StackingClassifier(
-            estimators=estimators,
-            final_estimator=LogisticRegression(max_iter=1000, random_state=RANDOM_STATE),
-            cv=3,
-        ),
+    study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=RANDOM_STATE))
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+    best_params = dict(study.best_params)
+    best_params.update({"scale_pos_weight": ratio, "random_state": RANDOM_STATE, "n_jobs": 1, "verbose": -1})
+    best_model = make_model_pipeline(X_raw, "ordinal", LGBMClassifier(**best_params))
+    best_model.fit(X, y)
+    row = {
+        "model": "LightGBM_Optuna_TPE",
+        "tuning_method": "Optuna_TPE_Bayesian",
+        "best_cv_f2": float(study.best_value),
+        "best_params": best_params,
+        "seconds": round(time.time() - start, 1),
+        "n_trials": n_trials,
     }
+    trials_df = study.trials_dataframe()
+    return best_model, row, trials_df
+
+
+def default_random_search_spaces() -> dict:
+    """Espacios de búsqueda compactos para ejecutar en laptop."""
+    return {
+        "RandomForest_random_search": {
+            "clf__n_estimators": randint(40, 100),
+            "clf__max_depth": randint(5, 18),
+            "clf__min_samples_leaf": randint(10, 80),
+            "clf__min_samples_split": randint(20, 140),
+            "clf__max_features": ["sqrt", "log2", 0.7],
+        },
+        "DecisionTree_random_search": {
+            "clf__max_depth": randint(4, 16),
+            "clf__min_samples_leaf": randint(20, 160),
+            "clf__min_samples_split": randint(30, 200),
+            "clf__criterion": ["gini", "entropy", "log_loss"],
+        },
+        "LogisticRegression_random_search": {
+            "clf__C": loguniform(0.02, 8.0),
+            "clf__penalty": ["l1", "l2"],
+            "sampler__sampling_strategy": uniform(0.35, 0.35),
+        },
+        "XGBoost_random_search": {
+            "clf__n_estimators": randint(30, 90),
+            "clf__max_depth": randint(3, 7),
+            "clf__learning_rate": loguniform(0.02, 0.15),
+            "clf__subsample": uniform(0.65, 0.30),
+            "clf__colsample_bytree": uniform(0.65, 0.30),
+        },
+    }
+
+
+def dataframe_from_rows(rows: list[dict]) -> pd.DataFrame:
+    out = []
+    for row in rows:
+        clean = row.copy()
+        clean["best_params"] = str(clean.get("best_params", {}))
+        out.append(clean)
+    return pd.DataFrame(out)

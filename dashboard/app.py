@@ -1,44 +1,158 @@
-"""Dashboard Sprint 6 — Stakeholder view connected to the deployed API.
+"""Dashboard comercial Streamlit para el MVP DP261.
 
-This Streamlit app is intentionally business-facing: it consumes the API
-(/health, /version, /predict) but hides technical details in an expandable
-section. It supports batch CSV scoring, risk segmentation, business-value
-validation when the target column is available, and per-instance explainability.
+Objetivo UX:
+El usuario principal no es data scientist, sino un agente comercial o comprador que necesita
+responder rápido: ¿procedo, reviso o detengo la compra del vehículo? Por eso el tablero prioriza:
+1. semáforo visual y decisión accionable;
+2. datos básicos del vehículo para identificarlo;
+3. explicación simple de los principales factores;
+4. detalle técnico concentrado en la barra lateral ocultable.
+
+Uso local:
+    API_URL=http://localhost:8000 streamlit run dashboard/app.py
 """
 from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import requests
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PAYLOAD_PATH = PROJECT_ROOT / "handoff" / "contracts" / "example_request.json"
-DEFAULT_SAMPLE_PATH = PROJECT_ROOT / "data" / "processed" / "test_final.csv"
 TARGET = "IsBadBuy"
+DEFAULT_SAMPLE = PROJECT_ROOT / "data" / "processed" / "test_final.csv"
 
-DEFAULT_ASSUMPTIONS = {
-    "benefit_tp": 2500,
-    "cost_fp": -900,
-    "cost_fn": 0,
-    "benefit_tn": 0,
+st.set_page_config(page_title="Semáforo Bad Buy", page_icon="🚦", layout="wide")
+
+RISK_STYLE = {
+    "ROJO": {
+        "emoji": "🔴",
+        "label": "Alto riesgo",
+        "color": "#dc2626",
+        "bg": "#fee2e2",
+        "border": "#ef4444",
+        "action": "Detener compra o derivar a revisión experta",
+    },
+    "ÁMBAR": {
+        "emoji": "🟠",
+        "label": "Riesgo medio",
+        "color": "#d97706",
+        "bg": "#fef3c7",
+        "border": "#f59e0b",
+        "action": "Revisar manualmente antes de comprar",
+    },
+    "VERDE": {
+        "emoji": "🟢",
+        "label": "Riesgo bajo",
+        "color": "#16a34a",
+        "bg": "#dcfce7",
+        "border": "#22c55e",
+        "action": "Continuar evaluación comercial",
+    },
 }
 
-st.set_page_config(
-    page_title="Evaluación de Riesgo de Compra Automotriz",
-    page_icon="🚗",
-    layout="wide",
+VEHICLE_ID_COLUMNS = [
+    "row_id",
+    "Auction",
+    "Make",
+    "Model",
+    "VehYear",
+    "VehicleAge",
+    "VehOdo",
+    "VehBCost",
+    "WarrantyCost",
+    "VNST",
+]
+
+st.markdown(
+    """
+    <style>
+    .main-title {
+        font-size: 2.05rem;
+        font-weight: 800;
+        margin-bottom: 0.2rem;
+    }
+    .subtitle {
+        font-size: 1.02rem;
+        color: #475569;
+        margin-bottom: 1.2rem;
+    }
+    .step-box {
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
+        min-height: 120px;
+    }
+    .risk-card {
+        border-radius: 18px;
+        padding: 1.1rem 1.2rem;
+        border: 2px solid var(--risk-border);
+        background: var(--risk-bg);
+        color: #0f172a;
+        margin-bottom: 1rem;
+    }
+    .risk-card .risk-emoji {
+        font-size: 3rem;
+        line-height: 1;
+    }
+    .risk-card .risk-title {
+        font-size: 1.55rem;
+        font-weight: 800;
+        color: var(--risk-color);
+    }
+    .risk-card .risk-action {
+        font-size: 1.05rem;
+        font-weight: 650;
+        margin-top: 0.25rem;
+    }
+    .metric-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 0.9rem 1rem;
+        background: white;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+    .metric-card .metric-label {
+        font-size: 0.86rem;
+        color: #64748b;
+    }
+    .metric-card .metric-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .vehicle-chip {
+        display: inline-block;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 0.28rem 0.7rem;
+        margin: 0.15rem 0.15rem 0.15rem 0;
+        background: #ffffff;
+        font-size: 0.88rem;
+    }
+    .small-muted {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 
-def get_env(name: str, default: str = "") -> str:
-    return os.getenv(name, default)
+def api_url() -> str:
+    return os.getenv("API_URL", "http://localhost:8000").rstrip("/")
+
+
+def headers() -> Dict[str, str]:
+    key = os.getenv("API_KEY")
+    return {"x-api-key": key} if key else {}
 
 
 def money(value: float | int | None) -> str:
@@ -47,456 +161,409 @@ def money(value: float | int | None) -> str:
     return f"USD {value:,.0f}"
 
 
-def pct(value: float | int | None) -> str:
+def percent(value: float | int | None) -> str:
     if value is None or pd.isna(value):
         return "N/A"
-    return f"{value:.1%}"
+    return f"{float(value) * 100:.1f}%"
 
 
-def normalize_api_url(url: str) -> str:
-    return url.strip().rstrip("/")
+def fmt_number(value: Any) -> str:
+    if value is None or pd.isna(value):
+        return "N/A"
+    if isinstance(value, (int, float)):
+        return f"{value:,.0f}"
+    return str(value)
 
 
-def make_headers(api_key: str) -> Dict[str, str]:
-    return {"x-api-key": api_key} if api_key else {}
-
-
-@st.cache_data(ttl=60, show_spinner=False)
-def call_health(api_url: str, timeout: int) -> Dict[str, Any]:
-    response = requests.get(f"{api_url}/health", timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-
-@st.cache_data(ttl=60, show_spinner=False)
-def call_version(api_url: str, timeout: int) -> Dict[str, Any]:
-    response = requests.get(f"{api_url}/version", timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
-
-@st.cache_data(ttl=60, show_spinner=False)
-def predict_record(api_url: str, payload_json: str, api_key: str, timeout: int) -> Dict[str, Any]:
-    payload = json.loads(payload_json)
-    response = requests.post(
-        f"{api_url}/predict",
-        json=payload,
-        headers=make_headers(api_key),
-        timeout=timeout,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def load_example_payload() -> Dict[str, Any]:
-    if DEFAULT_PAYLOAD_PATH.exists():
-        return json.loads(DEFAULT_PAYLOAD_PATH.read_text(encoding="utf-8"))
-    return {
-        "VehicleAge": 3,
-        "VehOdo": 75415,
-        "VehBCost": 6500,
-        "WarrantyCost": 1500,
-    }
-
-
-def load_sample_df() -> pd.DataFrame:
-    if DEFAULT_SAMPLE_PATH.exists():
-        return pd.read_csv(DEFAULT_SAMPLE_PATH)
-    return pd.DataFrame([load_example_payload()])
-
-
-def clean_payload(row: pd.Series) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {}
+def clean_record(row: pd.Series) -> Dict[str, Any]:
+    record = {}
     for key, value in row.items():
         if key == TARGET:
             continue
         if pd.isna(value):
-            payload[key] = None
+            record[key] = None
         elif hasattr(value, "item"):
-            payload[key] = value.item()
+            record[key] = value.item()
         else:
-            payload[key] = value
-    return payload
+            record[key] = value
+    return record
 
 
-def predict_dataframe(df: pd.DataFrame, api_url: str, api_key: str, timeout: int, limit: int) -> pd.DataFrame:
-    records: List[Dict[str, Any]] = []
-    input_df = df.drop(columns=[TARGET], errors="ignore").head(limit).copy()
+@st.cache_data(ttl=60, show_spinner=False)
+def call_get(path: str) -> Dict[str, Any]:
+    r = requests.get(f"{api_url()}{path}", timeout=10)
+    r.raise_for_status()
+    return r.json()
 
-    progress = st.progress(0, text="Enviando vehículos a la API...")
-    total = len(input_df)
 
-    for pos, (idx, row) in enumerate(input_df.iterrows(), start=1):
-        payload = clean_payload(row)
-        result = predict_record(
-            api_url,
-            json.dumps(payload, sort_keys=True, default=str),
-            api_key,
-            timeout,
-        )
-        records.append(
+@st.cache_data(ttl=60, show_spinner=False)
+def predict_one(payload_json: str) -> Dict[str, Any]:
+    payload = json.loads(payload_json)
+    r = requests.post(f"{api_url()}/predict", json=payload, headers=headers(), timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+
+def load_default_sample() -> pd.DataFrame:
+    if DEFAULT_SAMPLE.exists():
+        # Para demo se toma una muestra pequeña. Si existe target, solo se usa para validar internamente.
+        return pd.read_csv(DEFAULT_SAMPLE).head(50)
+    return pd.DataFrame()
+
+
+def vehicle_summary(row: pd.Series) -> str:
+    make = row.get("Make", "")
+    model = row.get("Model", "")
+    year = row.get("VehYear", "")
+    auction = row.get("Auction", "")
+    return " | ".join([str(x) for x in [make, model, year, auction] if str(x) not in {"", "nan", "None"}])
+
+
+def predict_df(df: pd.DataFrame, limit: int) -> pd.DataFrame:
+    rows: List[Dict[str, Any]] = []
+    input_df = df.head(limit).copy()
+    progress = st.progress(0, text="Evaluando vehículos...")
+    for i, (idx, row) in enumerate(input_df.iterrows(), start=1):
+        payload = clean_record(row)
+        result = predict_one(json.dumps(payload, sort_keys=True, default=str))
+        segment = result.get("risk_segment", "N/A")
+        style = RISK_STYLE.get(segment, {})
+        base_data = {col: row.get(col) for col in VEHICLE_ID_COLUMNS if col != "row_id" and col in input_df.columns}
+        rows.append(
             {
                 "row_id": idx,
-                "risk_score": result.get("risk_score"),
-                "threshold": result.get("threshold"),
+                "Vehículo": vehicle_summary(row),
+                "Semáforo": f"{style.get('emoji', '⚪')} {segment}",
+                "risk_segment": segment,
+                "Riesgo estimado": result.get("risk_score"),
+                "Decisión comercial": result.get("decision"),
                 "prediction": result.get("prediction"),
-                "decision": result.get("decision"),
-                "model_name": result.get("model_name"),
-                "model_version": result.get("model_version"),
-                "api_version": result.get("api_version"),
-                "explanation_method": result.get("explanation_method"),
-                "shap_top_features": result.get("shap_top_features", []),
+                "threshold": result.get("threshold"),
+                "Factores clave": result.get("shap_top_features", []),
+                "Método explicación": result.get("explanation_method"),
                 "raw_response": result,
+                **base_data,
             }
         )
-        progress.progress(pos / max(total, 1), text=f"Procesados {pos}/{total} vehículos")
-
+        progress.progress(i / max(len(input_df), 1), text=f"Evaluados {i}/{len(input_df)}")
     progress.empty()
-    predictions = pd.DataFrame(records)
-    if TARGET in df.columns and not predictions.empty:
-        y_true = df.loc[predictions["row_id"], TARGET].astype(int).values
-        predictions["actual_is_bad_buy"] = y_true
-    return predictions
+    pred = pd.DataFrame(rows)
+    if TARGET in input_df.columns and not pred.empty:
+        pred["actual"] = input_df.loc[pred["row_id"], TARGET].astype(int).values
+    return pred
 
 
-def risk_segment(score: float | None, threshold: float | None) -> str:
-    if score is None or pd.isna(score):
-        return "Sin score"
-    if threshold is None or pd.isna(threshold):
-        threshold = 0.70
-    if score >= threshold:
-        return "Alto riesgo"
-    if score >= max(threshold - 0.20, 0):
-        return "Riesgo medio"
-    return "Riesgo bajo"
-
-
-def build_results_view(source_df: pd.DataFrame, predictions: pd.DataFrame) -> pd.DataFrame:
-    if predictions.empty:
-        return predictions
-    source = source_df.copy()
-    source["row_id"] = source.index
-    visible_cols = [
-        "row_id",
-        "risk_score",
-        "threshold",
-        "prediction",
-        "risk_segment",
-        "decision",
-        "actual_is_bad_buy",
-    ]
-    preds = predictions.copy()
-    preds["risk_segment"] = [risk_segment(s, t) for s, t in zip(preds["risk_score"], preds["threshold"])]
-    existing_visible = [c for c in visible_cols if c in preds.columns]
-    merged = preds[existing_visible].merge(source, on="row_id", how="left")
-    return merged
-
-
-def confusion_and_value(predictions: pd.DataFrame, assumptions: Dict[str, float]) -> Tuple[Optional[Dict[str, int]], Optional[float]]:
-    if "actual_is_bad_buy" not in predictions.columns or predictions.empty:
-        return None, None
-
-    y_true = predictions["actual_is_bad_buy"].astype(int)
-    y_pred = predictions["prediction"].astype(int)
-
-    tp = int(((y_true == 1) & (y_pred == 1)).sum())
-    fp = int(((y_true == 0) & (y_pred == 1)).sum())
-    fn = int(((y_true == 1) & (y_pred == 0)).sum())
-    tn = int(((y_true == 0) & (y_pred == 0)).sum())
-
-    value = (
+def business_value(pred: pd.DataFrame, assumptions: Dict[str, float]) -> float | None:
+    if "actual" not in pred.columns or pred.empty:
+        return None
+    y = pred["actual"].astype(int)
+    p = pred["prediction"].astype(int)
+    tp = int(((y == 1) & (p == 1)).sum())
+    tn = int(((y == 0) & (p == 0)).sum())
+    fp = int(((y == 0) & (p == 1)).sum())
+    fn = int(((y == 1) & (p == 0)).sum())
+    return (
         tp * assumptions.get("benefit_tp", 2500)
+        + tn * assumptions.get("benefit_tn", 600)
         + fp * assumptions.get("cost_fp", -900)
-        + fn * assumptions.get("cost_fn", 0)
-        + tn * assumptions.get("benefit_tn", 0)
+        + fn * assumptions.get("cost_fn", -4500)
     )
-    return {"TP": tp, "FP": fp, "FN": fn, "TN": tn}, float(value)
 
 
-def extract_assumptions(predictions: pd.DataFrame) -> Dict[str, float]:
-    if predictions.empty or "raw_response" not in predictions.columns:
-        return DEFAULT_ASSUMPTIONS
-    raw = predictions["raw_response"].iloc[0]
-    assumptions = raw.get("business_value_assumptions", {}) if isinstance(raw, dict) else {}
-    return {
-        "benefit_tp": float(assumptions.get("benefit_tp", DEFAULT_ASSUMPTIONS["benefit_tp"])),
-        "cost_fp": float(assumptions.get("cost_fp", DEFAULT_ASSUMPTIONS["cost_fp"])),
-        "cost_fn": float(assumptions.get("cost_fn", DEFAULT_ASSUMPTIONS["cost_fn"])),
-        "benefit_tn": float(assumptions.get("benefit_tn", DEFAULT_ASSUMPTIONS["benefit_tn"])),
+def render_metric_card(label: str, value: str, color: str | None = None) -> None:
+    style = f"color:{color};" if color else ""
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-label">{label}</div>
+            <div class="metric-value" style="{style}">{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_risk_card(segment: str, risk_score: float | None, decision: str) -> None:
+    style = RISK_STYLE.get(segment, RISK_STYLE["ÁMBAR"])
+    st.markdown(
+        f"""
+        <div class="risk-card" style="--risk-bg:{style['bg']}; --risk-border:{style['border']}; --risk-color:{style['color']};">
+            <div style="display:flex; gap:1rem; align-items:center;">
+                <div class="risk-emoji">{style['emoji']}</div>
+                <div>
+                    <div class="risk-title">{segment} · {style['label']}</div>
+                    <div class="risk-action">{style['action']}</div>
+                    <div class="small-muted">Score de riesgo del modelo: <b>{percent(risk_score)}</b></div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption(decision)
+
+
+def render_vehicle_chips(row: pd.Series) -> None:
+    chips = []
+    labels = {
+        "Auction": "Subasta",
+        "Make": "Marca",
+        "Model": "Modelo",
+        "VehYear": "Año",
+        "VehicleAge": "Antigüedad",
+        "VehOdo": "Kilometraje",
+        "VehBCost": "Costo compra",
+        "WarrantyCost": "Garantía",
+        "VNST": "Estado",
     }
+    for col, label in labels.items():
+        if col in row.index:
+            value = row.get(col)
+            if col in {"VehBCost", "WarrantyCost"}:
+                value_text = money(value)
+            else:
+                value_text = fmt_number(value)
+            chips.append(f'<span class="vehicle-chip"><b>{label}:</b> {value_text}</span>')
+    st.markdown("".join(chips), unsafe_allow_html=True)
 
 
-def plot_confusion_matrix(counts: Dict[str, int]) -> go.Figure:
-    matrix = [[counts["TN"], counts["FP"]], [counts["FN"], counts["TP"]]]
-    fig = go.Figure(
-        data=go.Heatmap(
-            z=matrix,
-            x=["Predicción: Good Buy", "Predicción: Bad Buy"],
-            y=["Real: Good Buy", "Real: Bad Buy"],
-            text=matrix,
-            texttemplate="%{text}",
-            hovertemplate="%{y}<br>%{x}<br>Casos: %{z}<extra></extra>",
+def factors_to_df(items: List[Dict[str, Any]]) -> pd.DataFrame:
+    if not items:
+        return pd.DataFrame()
+    rows = []
+    for item in items:
+        rows.append(
+            {
+                "Factor": item.get("display_name") or item.get("feature"),
+                "Valor del vehículo": item.get("value"),
+                "Relevancia": abs(float(item.get("impact_abs") or item.get("impact") or 0.0)),
+                "Lectura": item.get("impact_direction", "factor_relevante"),
+                "Detalle técnico": item.get("detail"),
+            }
         )
-    )
-    fig.update_layout(title="Matriz de confusión del lote evaluado", height=420)
-    return fig
+    return pd.DataFrame(rows).sort_values("Relevancia", ascending=False)
 
 
-def flatten_shap_items(items: Any) -> pd.DataFrame:
-    if isinstance(items, str):
-        try:
-            items = json.loads(items)
-        except Exception:
-            items = []
-    if not isinstance(items, list):
-        items = []
-    df = pd.DataFrame(items)
-    if df.empty:
-        return df
-    if "shap_value" in df.columns:
-        df["abs_impact"] = df["shap_value"].abs()
-        df = df.sort_values("abs_impact", ascending=False)
-    return df
-
-
-# -----------------------------------------------------------------------------
-# Sidebar configuration
-# -----------------------------------------------------------------------------
-with st.sidebar:
-    st.header("Configuración del MVP")
-    api_url = normalize_api_url(
-        st.text_input("Endpoint de la API", value=get_env("API_URL", "http://localhost:8000"))
-    )
-    api_key = st.text_input(
-        "API Key",
-        value=get_env("API_KEY", ""),
-        type="password",
-        help="En local puede quedar vacío si la API corre con REQUIRE_API_KEY=false.",
-    )
-    timeout = int(st.number_input("Timeout por request (segundos)", min_value=5, max_value=120, value=int(get_env("API_TIMEOUT_SECONDS", "20"))))
-    max_rows = int(st.slider("Máximo de vehículos a evaluar", min_value=1, max_value=500, value=50, step=1))
-    st.caption("Para EC2, cambia el endpoint por http://<EC2_PUBLIC_IP> o el dominio HTTPS configurado.")
-
-# -----------------------------------------------------------------------------
-# Header and API diagnostics
-# -----------------------------------------------------------------------------
-st.title("Evaluación de Riesgo de Compra Automotriz")
-st.write(
-    "Dashboard para priorizar la revisión de vehículos en subastas, identificar posibles "
-    "Bad Buys y cuantificar el impacto económico esperado del modelo."
+st.markdown('<div class="main-title">🚦 Semáforo comercial de riesgo de compra</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="subtitle">Herramienta para decidir rápidamente si un vehículo puede continuar, requiere revisión manual o debe detenerse por alto riesgo.</div>',
+    unsafe_allow_html=True,
 )
 
-health_data: Dict[str, Any] = {}
-version_data: Dict[str, Any] = {}
-api_ready = False
+with st.expander("📌 ¿Cómo usar este reporte?", expanded=True):
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(
+            """
+            <div class="step-box">
+            <b>1. Sube el archivo</b><br>
+            Carga un CSV con las columnas originales del vehículo. No necesitas crear variables nuevas: la API hace el preprocesamiento.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown(
+            """
+            <div class="step-box">
+            <b>2. Lee el semáforo</b><br>
+            🟢 continuar · 🟠 revisar manualmente · 🔴 detener o escalar. La decisión está pensada para negocio, no para técnicos.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            """
+            <div class="step-box">
+            <b>3. Revisa el motivo</b><br>
+            Para cada vehículo se muestran los factores más relevantes, como kilometraje, costo, antigüedad, garantía o precios MMR.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+# -----------------------------------------------------------------------------
+# Panel técnico lateral
+# -----------------------------------------------------------------------------
+# Streamlit permite ocultar/mostrar la barra lateral. Por eso todo lo técnico
+# se concentra aquí: estado de API, versión del modelo, supuestos de negocio y
+# respuesta JSON cruda. El cuerpo principal queda reservado para el usuario
+# comercial: instrucciones, carga, semáforos, gráficos y tablas.
+with st.sidebar:
+    st.title("⚙️ Panel técnico")
+    st.caption(
+        "Sección para equipo técnico o sustentación. El agente comercial puede ocultarla desde la flecha lateral."
+    )
+    st.markdown("### Conexión API")
+    st.code(api_url(), language="text")
 
 try:
-    health_data = call_health(api_url, timeout)
-    version_data = call_version(api_url, timeout)
-    api_ready = health_data.get("status") == "ok" and bool(health_data.get("model_loaded", True))
+    health = call_get("/health")
+    version = call_get("/version")
 except Exception as exc:
-    st.error(f"No se pudo conectar con la API en {api_url}. Detalle: {exc}")
-    st.info("Verifica que la API esté corriendo con Uvicorn o Docker antes de usar el dashboard.")
-
-status_col, model_col, threshold_col, mode_col = st.columns(4)
-status_col.metric("Estado del MVP", "Operativo" if api_ready else "No disponible")
-model_col.metric("Modelo", version_data.get("model_version", "N/A"))
-threshold_col.metric("Threshold operativo", version_data.get("threshold", 0.70))
-mode_col.metric("Modo", "API REST")
-
-with st.expander("Diagnóstico técnico de la API", expanded=False):
-    st.write("Este bloque sirve para QA/Sprint Review. No es necesario para el usuario final.")
-    c1, c2 = st.columns(2)
-    c1.write(f"Endpoint configurado: `{api_url}`")
-    c1.json(health_data or {"status": "unavailable"})
-    c2.json(version_data or {"version": "unavailable"})
-
-if not api_ready:
+    with st.sidebar:
+        st.error("API no conectada")
+        st.caption(str(exc))
+    st.error("No se pudo conectar con la API. Primero levanta Docker/FastAPI y vuelve a cargar el dashboard.")
     st.stop()
 
-# -----------------------------------------------------------------------------
-# Main workflow
-# -----------------------------------------------------------------------------
-tab_upload, tab_results, tab_explain, tab_contract = st.tabs(
-    [
-        "1. Evaluar vehículos",
-        "2. Resultados y valor de negocio",
-        "3. Explicabilidad por vehículo",
-        "4. Contrato API",
-    ]
+with st.sidebar:
+    st.success("API conectada")
+    st.markdown("### Estado y versión")
+    st.write(f"**Estado:** `{health.get('status', 'N/A')}`")
+    st.write(f"**Modelo:** `{version.get('model_name', 'N/A')}`")
+    st.write(f"**Versión modelo:** `{version.get('model_version', 'N/A')}`")
+    st.write(f"**Versión API:** `{version.get('api_version', 'N/A')}`")
+    with st.expander("Ver JSON técnico de health/version", expanded=False):
+        st.json({"health": health, "version": version})
+    st.markdown("---")
+    st.markdown("### Leyenda técnica")
+    for segment, style in RISK_STYLE.items():
+        st.markdown(f"{style['emoji']} **{segment}**: {style['action']}")
+    st.caption("La leyenda también se explica en el cuerpo para el usuario comercial.")
+
+st.subheader("Carga de datos")
+col_upload, col_limit = st.columns([2.2, 0.8])
+with col_upload:
+    uploaded = st.file_uploader("Sube un CSV de vehículos para evaluar", type="csv")
+with col_limit:
+    limit = st.slider("Máximo de vehículos", 1, 300, 30)
+if uploaded:
+    df = pd.read_csv(uploaded)
+    st.success(f"Archivo cargado: {len(df):,} vehículos y {len(df.columns):,} columnas.")
+else:
+    st.info("Aún no subiste un archivo. Para demo se puede usar una muestra local del test final.")
+    use_sample = st.toggle("Usar muestra local de demo", value=True)
+    df = load_default_sample() if use_sample else pd.DataFrame()
+
+if df.empty:
+    st.warning("Sube un CSV o activa la muestra local para iniciar la evaluación.")
+    st.stop()
+
+with st.expander("Vista previa del archivo cargado", expanded=False):
+    st.dataframe(df.head(10), use_container_width=True)
+
+if st.button("🚦 Evaluar vehículos", type="primary", use_container_width=True):
+    pred = predict_df(df, limit=limit)
+    st.session_state["pred"] = pred
+else:
+    pred = st.session_state.get("pred", pd.DataFrame())
+
+if pred.empty:
+    st.stop()
+
+# Summary cards
+rojos = int((pred["risk_segment"] == "ROJO").sum())
+ambar = int((pred["risk_segment"] == "ÁMBAR").sum())
+verdes = int((pred["risk_segment"] == "VERDE").sum())
+
+st.subheader("Resumen ejecutivo del lote")
+m1, m2, m3, m4 = st.columns(4)
+with m1:
+    render_metric_card("Vehículos evaluados", f"{len(pred):,}")
+with m2:
+    render_metric_card("🔴 Detener / escalar", f"{rojos:,}", RISK_STYLE["ROJO"]["color"])
+with m3:
+    render_metric_card("🟠 Revisión manual", f"{ambar:,}", RISK_STYLE["ÁMBAR"]["color"])
+with m4:
+    render_metric_card("🟢 Continuar", f"{verdes:,}", RISK_STYLE["VERDE"]["color"])
+
+assumptions = pred["raw_response"].iloc[0].get("business_value_assumptions", {})
+value = business_value(pred, assumptions)
+if value is not None:
+    st.metric("Valor económico estimado del lote evaluado", money(value))
+
+# Visual distribution
+chart_df = pred["risk_segment"].value_counts().reindex(["ROJO", "ÁMBAR", "VERDE"]).fillna(0).reset_index()
+chart_df.columns = ["Semáforo", "Vehículos"]
+fig = px.bar(
+    chart_df,
+    x="Semáforo",
+    y="Vehículos",
+    text="Vehículos",
+    color="Semáforo",
+    color_discrete_map={"ROJO": "#dc2626", "ÁMBAR": "#f59e0b", "VERDE": "#16a34a"},
+    title="Distribución del lote por decisión comercial",
+)
+fig.update_layout(showlegend=False, height=360, margin=dict(l=10, r=10, t=55, b=10))
+st.plotly_chart(fig, use_container_width=True)
+
+st.subheader("Resultado por vehículo")
+show_cols = [
+    "row_id",
+    "Semáforo",
+    "Riesgo estimado",
+    "Decisión comercial",
+    "Auction",
+    "Make",
+    "Model",
+    "VehYear",
+    "VehicleAge",
+    "VehOdo",
+    "VehBCost",
+    "WarrantyCost",
+    "VNST",
+]
+show_cols = [c for c in show_cols if c in pred.columns]
+result_table = pred[show_cols].copy()
+if "Riesgo estimado" in result_table.columns:
+    result_table["Riesgo estimado"] = result_table["Riesgo estimado"].map(lambda x: f"{x * 100:.1f}%" if pd.notna(x) else "N/A")
+st.dataframe(result_table, use_container_width=True, hide_index=True)
+
+csv_download = pred.drop(columns=["raw_response"], errors="ignore").to_csv(index=False).encode("utf-8")
+st.download_button(
+    "⬇️ Descargar resultados del lote",
+    data=csv_download,
+    file_name="resultados_semaforo_badbuy.csv",
+    mime="text/csv",
+    use_container_width=True,
 )
 
-with tab_upload:
-    st.subheader("Carga de vehículos para evaluación")
-    st.write(
-        "Sube un CSV con las variables originales del vehículo. Si el archivo incluye "
-        "`IsBadBuy`, el dashboard también calcula matriz de confusión y valor económico del lote."
+st.subheader("Detalle de un vehículo")
+selected = st.selectbox(
+    "Selecciona una fila para ver decisión y factores",
+    pred["row_id"].tolist(),
+    format_func=lambda x: f"Fila {x} · {pred.loc[pred['row_id'] == x, 'Semáforo'].iloc[0]} · {pred.loc[pred['row_id'] == x, 'Vehículo'].iloc[0]}",
+)
+selected_row = pred.loc[pred["row_id"] == selected].iloc[0]
+
+left, right = st.columns([0.95, 1.05])
+with left:
+    render_risk_card(
+        str(selected_row.get("risk_segment")),
+        selected_row.get("Riesgo estimado"),
+        str(selected_row.get("Decisión comercial")),
     )
+    st.markdown("**Datos para identificar el vehículo**")
+    render_vehicle_chips(selected_row)
 
-    uploaded = st.file_uploader("CSV de vehículos", type="csv")
-    if uploaded is not None:
-        input_df = pd.read_csv(uploaded)
-        source_label = "archivo cargado"
+with right:
+    st.markdown("**Factores que explican la alerta**")
+    items = selected_row.get("Factores clave", [])
+    factors = factors_to_df(items)
+    if not factors.empty:
+        fig2 = px.bar(
+            factors.head(5),
+            x="Relevancia",
+            y="Factor",
+            orientation="h",
+            text="Valor del vehículo",
+            title="Top factores del vehículo seleccionado",
+        )
+        fig2.update_layout(height=330, margin=dict(l=10, r=10, t=50, b=10), yaxis={"categoryorder": "total ascending"})
+        st.plotly_chart(fig2, use_container_width=True)
+        st.dataframe(factors[["Factor", "Valor del vehículo", "Lectura"]], hide_index=True, use_container_width=True)
+        st.caption(
+            "La relevancia muestra qué variables pesaron más en la evaluación. Si el método es fallback de importancia, la dirección exacta se interpreta con cautela."
+        )
     else:
-        input_df = load_sample_df()
-        source_label = "muestra local"
+        st.info("La API no devolvió factores explicativos para este caso. Revisar configuración de SHAP/fallback en la API.")
 
-    st.caption(f"Fuente actual: {source_label}. Filas disponibles: {len(input_df):,}")
-    st.dataframe(input_df.head(20), use_container_width=True)
-
-    missing_core = [c for c in ["VehicleAge", "VehOdo", "VehBCost", "WarrantyCost"] if c not in input_df.columns]
-    if missing_core:
-        st.warning(
-            "El CSV no contiene algunas variables comunes del contrato: " + ", ".join(missing_core) +
-            ". La API intentará predecir igual si el contrato mínimo se cumple."
-        )
-
-    if st.button("Generar evaluación de riesgo", type="primary", use_container_width=True):
-        try:
-            with st.spinner("Generando predicciones vía API..."):
-                predictions_df = predict_dataframe(input_df, api_url, api_key, timeout, max_rows)
-                st.session_state["input_df"] = input_df
-                st.session_state["predictions_df"] = predictions_df
-            st.success(f"Evaluación completada para {len(predictions_df):,} vehículos.")
-        except requests.HTTPError as exc:
-            detail = exc.response.text if exc.response is not None else str(exc)
-            st.error(f"La API respondió con error HTTP: {detail}")
-        except Exception as exc:
-            st.error(f"No se pudo completar la evaluación: {exc}")
-
-with tab_results:
-    st.subheader("Resultados del lote evaluado")
-    predictions_df = st.session_state.get("predictions_df")
-    input_df = st.session_state.get("input_df")
-
-    if predictions_df is None or predictions_df.empty or input_df is None:
-        st.info("Primero genera predicciones en la pestaña 'Evaluar vehículos'.")
-    else:
-        threshold = float(predictions_df["threshold"].dropna().iloc[0]) if predictions_df["threshold"].notna().any() else 0.70
-        results_view = build_results_view(input_df, predictions_df)
-        assumptions = extract_assumptions(predictions_df)
-        counts, business_value = confusion_and_value(predictions_df, assumptions)
-
-        total = len(predictions_df)
-        high_risk = int((predictions_df["prediction"] == 1).sum())
-        high_risk_rate = high_risk / total if total else 0
-        avg_score = float(predictions_df["risk_score"].mean())
-
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        kpi1.metric("Vehículos evaluados", f"{total:,}")
-        kpi2.metric("Alto riesgo", f"{high_risk:,}", pct(high_risk_rate))
-        kpi3.metric("Score promedio", f"{avg_score:.3f}")
-        kpi4.metric("Valor económico", money(business_value) if business_value is not None else "Requiere IsBadBuy")
-
-        st.markdown("#### Segmentación de riesgo")
-        seg_df = results_view["risk_segment"].value_counts().rename_axis("segmento").reset_index(name="vehículos")
-        fig_seg = px.bar(seg_df, x="segmento", y="vehículos", text="vehículos", title="Distribución por segmento de riesgo")
-        st.plotly_chart(fig_seg, use_container_width=True)
-
-        fig_score = px.histogram(
-            predictions_df,
-            x="risk_score",
-            nbins=30,
-            title="Distribución de probabilidad de Bad Buy",
-        )
-        fig_score.add_vline(x=threshold, line_dash="dash", annotation_text=f"threshold {threshold:.2f}")
-        st.plotly_chart(fig_score, use_container_width=True)
-
-        st.markdown("#### Tabla priorizada para revisión")
-        filter_segment = st.multiselect(
-            "Filtrar segmento",
-            options=sorted(results_view["risk_segment"].dropna().unique().tolist()),
-            default=sorted(results_view["risk_segment"].dropna().unique().tolist()),
-        )
-        filtered = results_view[results_view["risk_segment"].isin(filter_segment)].copy()
-        filtered = filtered.sort_values("risk_score", ascending=False)
-        st.dataframe(filtered, use_container_width=True, height=420)
-
-        st.download_button(
-            "Descargar resultados priorizados",
-            filtered.to_csv(index=False).encode("utf-8"),
-            "badbuy_risk_predictions.csv",
-            "text/csv",
-            use_container_width=True,
-        )
-
-        if counts is not None:
-            st.markdown("#### Validación contra etiqueta real")
-            c1, c2 = st.columns([1, 1])
-            with c1:
-                st.plotly_chart(plot_confusion_matrix(counts), use_container_width=True)
-            with c2:
-                st.write("Supuestos de valor usados por la API:")
-                st.json(assumptions)
-                st.write(
-                    "Función: `BusinessValue = TP*2500 + FP*(-900) + FN*0 + TN*0` "
-                    "bajo el threshold operativo definido en Sprint 5."
-                )
-                st.metric("Business Value del lote", money(business_value))
-        else:
-            st.info("Para calcular matriz de confusión y business value del lote, incluye la columna `IsBadBuy` en el CSV.")
-
-with tab_explain:
-    st.subheader("¿Por qué el modelo predijo ese riesgo?")
-    st.write(
-        "Esta sección muestra los factores que más empujan la predicción hacia mayor o menor riesgo "
-        "para un vehículo seleccionado. La explicación llega desde la API."
-    )
-
-    predictions_df = st.session_state.get("predictions_df")
-    input_df = st.session_state.get("input_df")
-
-    if predictions_df is None or predictions_df.empty or input_df is None:
-        st.info("Primero genera predicciones en la pestaña 'Evaluar vehículos'.")
-    else:
-        ranked = predictions_df.sort_values("risk_score", ascending=False)
-        selected = st.selectbox(
-            "Selecciona vehículo por row_id",
-            ranked["row_id"].tolist(),
-            format_func=lambda x: f"row_id {x} | score {float(predictions_df.loc[predictions_df['row_id'] == x, 'risk_score'].iloc[0]):.3f}",
-        )
-        row_pred = predictions_df.loc[predictions_df["row_id"] == selected].iloc[0]
-        source_row = input_df.loc[selected].to_dict() if selected in input_df.index else {}
-
-        p1, p2, p3 = st.columns(3)
-        p1.metric("Risk score", f"{float(row_pred['risk_score']):.3f}")
-        p2.metric("Decisión", "Bad Buy" if int(row_pred["prediction"]) == 1 else "Good Buy")
-        p3.metric("Threshold", f"{float(row_pred['threshold']):.2f}")
-
-        st.write("Datos del vehículo seleccionado")
-        st.json(source_row)
-
-        shap_df = flatten_shap_items(row_pred.get("shap_top_features", []))
-        if shap_df.empty:
-            st.warning("La API no devolvió explicación SHAP para esta instancia.")
-            st.caption(f"Método reportado: {row_pred.get('explanation_method', 'N/A')}")
-        else:
-            st.caption(f"Método de explicación: {row_pred.get('explanation_method', 'N/A')}")
-            st.dataframe(shap_df, use_container_width=True)
-            fig_shap = px.bar(
-                shap_df.sort_values("shap_value"),
-                x="shap_value",
-                y="feature",
-                orientation="h",
-                title="Variables con mayor impacto en la predicción",
-                hover_data=[c for c in ["impact_direction", "abs_impact"] if c in shap_df.columns],
-            )
-            st.plotly_chart(fig_shap, use_container_width=True)
-
-with tab_contract:
-    st.subheader("Prueba controlada del contrato de entrada/salida")
-    st.write(
-        "Este bloque es útil para QA y Sprint Review: permite validar que `example_request.json` "
-        "sigue produciendo una respuesta válida de `/predict`."
-    )
-
-    payload = load_example_payload()
-    editable = st.text_area("Payload JSON", json.dumps(payload, indent=2, ensure_ascii=False), height=360)
-    if st.button("Validar contrato con /predict"):
-        try:
-            parsed = json.loads(editable)
-            response = predict_record(api_url, json.dumps(parsed, sort_keys=True, default=str), api_key, timeout)
-            st.success("Contrato validado correctamente")
-            st.json(response)
-        except Exception as exc:
-            st.error(f"Falló la validación del contrato: {exc}")
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("### Predicción seleccionada")
+    st.write(f"**Fila:** `{selected}`")
+    st.write(f"**Método explicación:** `{selected_row.get('Método explicación')}`")
+    with st.expander("Ver respuesta JSON completa", expanded=False):
+        st.json(selected_row.get("raw_response", {}))

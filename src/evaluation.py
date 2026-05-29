@@ -1,6 +1,10 @@
+"""Métricas técnicas y evaluación económica del proyecto."""
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
+    accuracy_score,
     average_precision_score,
     classification_report,
     confusion_matrix,
@@ -10,201 +14,106 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import cross_val_predict
 
-from src.config import BENEFIT_TN, BENEFIT_TP, COST_FN, COST_FP
+from src.config import BENEFIT_TN, BENEFIT_TP, BUSINESS_THRESHOLD, COST_FN, COST_FP
 
 
 def get_scores(model, X):
+    """Retorna score de riesgo de clase 1 compatible con varios clasificadores."""
     if hasattr(model, "predict_proba"):
         return model.predict_proba(X)[:, 1]
     if hasattr(model, "decision_function"):
-        raw = model.decision_function(X)
-        return (raw - raw.min()) / (raw.max() - raw.min() + 1e-9)
-    return model.predict(X)
+        raw = np.asarray(model.decision_function(X), dtype=float)
+        return 1 / (1 + np.exp(-raw))
+    return np.asarray(model.predict(X), dtype=float)
 
 
-def build_threshold_grid(y_score, score_type="predict_proba"):
-    y_score = np.asarray(y_score)
-    if score_type in {"predict_proba", "decision_function_scaled"}:
-        return np.round(np.arange(0.01, 0.91, 0.01), 3)
+def business_value_from_counts(
+    tn: int,
+    fp: int,
+    fn: int,
+    tp: int,
+    benefit_tp: float = BENEFIT_TP,
+    benefit_tn: float = BENEFIT_TN,
+    cost_fp: float = COST_FP,
+    cost_fn: float = COST_FN,
+) -> float:
+    """Valor total = TP*beneficio + TN*beneficio - costos FP/FN.
 
-    finite_scores = y_score[np.isfinite(y_score)]
-    return np.unique(np.quantile(finite_scores, np.linspace(0.01, 0.99, 99)))
-
-
-def get_oof_scores(estimator, X, y, cv, n_jobs=1):
-    if hasattr(estimator, "predict_proba"):
-        scores = cross_val_predict(
-            estimator,
-            X,
-            y,
-            cv=cv,
-            method="predict_proba",
-            n_jobs=n_jobs,
-        )[:, 1]
-        return np.asarray(scores), "predict_proba"
-
-    if hasattr(estimator, "decision_function"):
-        raw = cross_val_predict(
-            estimator,
-            X,
-            y,
-            cv=cv,
-            method="decision_function",
-            n_jobs=n_jobs,
-        )
-        scores = (raw - raw.min()) / (raw.max() - raw.min() + 1e-9)
-        return np.asarray(scores), "decision_function_scaled"
-
-    scores = cross_val_predict(estimator, X, y, cv=cv, method="predict", n_jobs=n_jobs)
-    return np.asarray(scores), "predict"
+    Los costos ya se parametrizan con signo negativo para que la ecuación sea
+    legible en las tablas y reportes.
+    """
+    return (tp * benefit_tp) + (tn * benefit_tn) + (fp * cost_fp) + (fn * cost_fn)
 
 
-def evaluate_thresholds(
+def evaluate_predictions(
     y_true,
     y_score,
-    thresholds=None,
-    benefit_tp=BENEFIT_TP,
-    cost_fp=COST_FP,
-    cost_fn=COST_FN,
-    benefit_tn=BENEFIT_TN,
-):
+    threshold: float = BUSINESS_THRESHOLD,
+    benefit_tp: float = BENEFIT_TP,
+    benefit_tn: float = BENEFIT_TN,
+    cost_fp: float = COST_FP,
+    cost_fn: float = COST_FN,
+) -> dict:
+    y_true = np.asarray(y_true).astype(int)
+    y_score = np.asarray(y_score, dtype=float)
+    y_pred = (y_score >= threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+    value = business_value_from_counts(tn, fp, fn, tp, benefit_tp, benefit_tn, cost_fp, cost_fn)
+    return {
+        "threshold": threshold,
+        "accuracy": accuracy_score(y_true, y_pred),
+        "precision": precision_score(y_true, y_pred, zero_division=0),
+        "recall": recall_score(y_true, y_pred, zero_division=0),
+        "f1": f1_score(y_true, y_pred, zero_division=0),
+        "f2": fbeta_score(y_true, y_pred, beta=2, zero_division=0),
+        "roc_auc": roc_auc_score(y_true, y_score) if len(np.unique(y_true)) > 1 else np.nan,
+        "average_precision": average_precision_score(y_true, y_score) if len(np.unique(y_true)) > 1 else np.nan,
+        "tn": int(tn),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tp": int(tp),
+        "business_value": float(value),
+        "business_value_per_case": float(value) / max(len(y_true), 1),
+        "positive_rate": float(y_pred.mean()),
+        "classification_report": classification_report(y_true, y_pred, output_dict=True, zero_division=0),
+    }
+
+
+def evaluate_model(model, X, y, threshold: float = BUSINESS_THRESHOLD) -> dict:
+    return evaluate_predictions(y, get_scores(model, X), threshold=threshold)
+
+
+def evaluate_threshold_grid(y_true, y_score, thresholds=None):
     if thresholds is None:
-        thresholds = np.arange(0.05, 0.96, 0.01)
-
+        thresholds = np.round(np.arange(0.05, 0.96, 0.01), 2)
     rows = []
-
-    for thr in thresholds:
-        y_pred = (y_score >= thr).astype(int)
-        tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
-
-        business_value = (
-            tp * benefit_tp +
-            fp * cost_fp +
-            fn * cost_fn +
-            tn * benefit_tn
-        )
-
-        rows.append({
-            "threshold": thr,
-            "tn": tn,
-            "fp": fp,
-            "fn": fn,
-            "tp": tp,
-            "recall": recall_score(y_true, y_pred, zero_division=0),
-            "f2": fbeta_score(y_true, y_pred, beta=2, zero_division=0),
-            "precision": precision_score(y_true, y_pred, zero_division=0),
-            "f1": f1_score(y_true, y_pred, zero_division=0),
-            "f05": fbeta_score(y_true, y_pred, beta=0.5, zero_division=0),
-            "fn_rate": fn / max(fn + tp, 1),
-            "fp_rate": fp / max(fp + tn, 1),
-            "business_value": business_value,
-            "positive_rate": y_pred.mean(),
-        })
-
+    for threshold in thresholds:
+        metrics = evaluate_predictions(y_true, y_score, threshold=float(threshold))
+        metrics.pop("classification_report", None)
+        rows.append(metrics)
     return pd.DataFrame(rows)
 
 
-def select_best_threshold(threshold_results, min_precision=None, max_positive_rate=None):
-    candidates = threshold_results.copy()
-
-    if min_precision is not None:
-        candidates = candidates[candidates["precision"] >= min_precision]
-
-    if max_positive_rate is not None:
-        candidates = candidates[candidates["positive_rate"] <= max_positive_rate]
-
-    if candidates.empty:
-        candidates = threshold_results.copy()
-
-    return candidates.sort_values(
-        ["recall", "f2", "precision"],
-        ascending=[False, False, False],
-    ).head(1)
-
-
-def threshold_tuning_cv(
-    model_name,
-    estimator,
-    X,
-    y,
-    cv,
-    thresholds=None,
-    n_jobs=1,
-    min_precision=None,
-    max_positive_rate=None,
-):
-    scores, score_type = get_oof_scores(estimator, X, y, cv=cv, n_jobs=n_jobs)
-
-    if thresholds is None:
-        thresholds = build_threshold_grid(scores, score_type)
-
-    results = evaluate_thresholds(y, scores, thresholds=thresholds)
-    results.insert(0, "model", model_name)
-    results["score_type"] = score_type
-
-    best = select_best_threshold(
-        results,
-        min_precision=min_precision,
-        max_positive_rate=max_positive_rate,
-    ).copy()
-    best["selected"] = True
-
-    return results
-
-
-def final_metrics(y_true, y_score, threshold):
-    y_pred = (y_score >= threshold).astype(int)
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
-
-    return {
-        "threshold": threshold,
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f2": fbeta_score(y_true, y_pred, beta=2, zero_division=0),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
-        "f05": fbeta_score(y_true, y_pred, beta=0.5, zero_division=0),
-        "roc_auc": roc_auc_score(y_true, y_score),
-        "average_precision": average_precision_score(y_true, y_score),
-        "true_negatives": tn,
-        "false_positives": fp,
-        "false_negatives": fn,
-        "true_positives": tp,
-        "confusion_matrix": [[tn, fp], [fn, tp]],
-        "classification_report": classification_report(
-            y_true,
-            y_pred,
-            zero_division=0,
-            output_dict=True,
-        ),
-    }
+def gain_curve(y_true, y_score):
+    order = np.argsort(-np.asarray(y_score))
+    y_sorted = np.asarray(y_true)[order]
+    cum_pos = np.cumsum(y_sorted)
+    total_pos = y_sorted.sum()
+    return pd.DataFrame({
+        "pct_population": np.arange(1, len(y_sorted) + 1) / len(y_sorted),
+        "pct_positives_captured": cum_pos / max(total_pos, 1),
+    })
 
 
 def bootstrap_metric_ci(y_true, y_score, metric_fn, n_boot=300, random_state=42):
     rng = np.random.default_rng(random_state)
     y_true = np.asarray(y_true)
     y_score = np.asarray(y_score)
-    vals = []
-
+    values = []
     for _ in range(n_boot):
         idx = rng.integers(0, len(y_true), len(y_true))
         if len(np.unique(y_true[idx])) < 2:
             continue
-        vals.append(metric_fn(y_true[idx], y_score[idx]))
-
-    return np.percentile(vals, [2.5, 97.5]).tolist()
-
-
-def gain_curve(y_true, y_score):
-    order = np.argsort(-y_score)
-    y_sorted = np.asarray(y_true)[order]
-    cum_pos = np.cumsum(y_sorted)
-    total_pos = y_sorted.sum()
-    pct_population = np.arange(1, len(y_sorted) + 1) / len(y_sorted)
-    pct_positives = cum_pos / max(total_pos, 1)
-
-    return pd.DataFrame({
-        "pct_population": pct_population,
-        "pct_positives_captured": pct_positives,
-    })
+        values.append(metric_fn(y_true[idx], y_score[idx]))
+    return np.percentile(values, [2.5, 97.5]).tolist() if values else [np.nan, np.nan]
