@@ -6,11 +6,11 @@ La API está pensada para que el dashboard reciba una respuesta útil para negoc
 - factores explicativos para que el agente entienda por qué revisar o detener una compra.
 
 Nota sobre explicabilidad:
-SHAP es el método preferido cuando el estimador lo soporta directamente. Para Bagging sobre
-árboles, TreeExplainer no siempre opera sobre el meta-estimador. En ese caso se usa un fallback
-transparente: importancia promedio de los árboles internos ponderada por el valor transformado de
-la instancia. No reemplaza a un análisis SHAP formal, pero evita que el dashboard quede vacío y
-permite mostrar factores relevantes al usuario comercial.
+La API intenta devolver explicaciones locales por instancia. Para árboles y boosting se usa
+SHAP cuando el estimador lo soporta directamente. Para Bagging sobre árboles se calcula una
+aproximación local promediando los valores SHAP de los árboles internos. Si SHAP no está
+disponible, se usa un fallback transparente basado en importancia del modelo, marcado
+explícitamente en `explanation_method`.
 """
 from __future__ import annotations
 
@@ -191,6 +191,102 @@ def _dense_vector(row: Any) -> np.ndarray:
     return row.toarray().ravel() if hasattr(row, "toarray") else np.asarray(row).ravel()
 
 
+def _extract_class1_shap_values(values: Any) -> np.ndarray:
+    """Normaliza la salida de SHAP y extrae contribuciones de la clase positiva.
+
+    SHAP puede devolver distintos formatos según versión/modelo:
+    - list[class_0, class_1]
+    - array con shape (n_samples, n_features)
+    - array con shape (n_samples, n_features, n_classes)
+    - Explanation.values
+    """
+    if hasattr(values, "values"):
+        values = values.values
+
+    if isinstance(values, list):
+        values = values[-1]
+
+    arr = np.asarray(values)
+
+    if arr.ndim == 3:
+        # Caso frecuente en SHAP reciente: (n_samples, n_features, n_outputs)
+        if arr.shape[0] == 1 and arr.shape[-1] >= 2:
+            return arr[0, :, 1].astype(float).ravel()
+        # Alternativa: (n_outputs, n_samples, n_features)
+        if arr.shape[0] >= 2 and arr.shape[1] == 1:
+            return arr[-1, 0, :].astype(float).ravel()
+
+    if arr.ndim == 2:
+        if arr.shape[0] == 1:
+            return arr[0].astype(float).ravel()
+        if arr.shape[1] == 1:
+            return arr[:, 0].astype(float).ravel()
+
+    return arr.astype(float).ravel()
+
+
+def _slice_transformed_row(row: Any, selected_features: np.ndarray) -> Any:
+    """Obtiene las columnas usadas por un estimador interno de Bagging."""
+    try:
+        return row[:, selected_features]
+    except Exception:
+        dense = _dense_vector(row)
+        return dense[selected_features].reshape(1, -1)
+
+
+def _bagging_tree_shap_impacts(clf: Any, row: Any, n_features: int) -> np.ndarray | None:
+    """Promedia explicaciones SHAP locales de los árboles internos de Bagging.
+
+    BaggingClassifier no siempre es soportado por TreeExplainer como meta-estimador.
+    En lugar de caer directamente a importancia global, se explica cada árbol interno
+    y se promedian sus contribuciones locales. Esto mantiene el foco correcto:
+    cuánto empuja cada variable la predicción de ESTE vehículo.
+    """
+    if not hasattr(clf, "estimators_"):
+        return None
+
+    try:
+        import shap  # type: ignore
+    except Exception:
+        return None
+
+    estimators_features = getattr(clf, "estimators_features_", None)
+    total_impacts = np.zeros(n_features, dtype=float)
+    valid_estimators = 0
+
+    for idx, estimator in enumerate(clf.estimators_):
+        selected = (
+            np.asarray(estimators_features[idx], dtype=int)
+            if estimators_features is not None
+            else np.arange(n_features, dtype=int)
+        )
+
+        try:
+            row_subset = _slice_transformed_row(row, selected)
+            explainer = shap.TreeExplainer(estimator)
+            values = explainer.shap_values(row_subset)
+            local_values = _extract_class1_shap_values(values)
+
+            if len(local_values) == 0:
+                continue
+
+            # Alinear la explicación del árbol interno al espacio transformado completo.
+            usable = min(len(local_values), len(selected))
+            mapped = np.zeros(n_features, dtype=float)
+            mapped[selected[:usable]] = local_values[:usable]
+
+            total_impacts += mapped
+            valid_estimators += 1
+        except Exception as exc:
+            log.debug("SHAP failed for Bagging inner estimator %s: %s", idx, exc)
+            continue
+
+    if valid_estimators == 0:
+        return None
+
+    return total_impacts / valid_estimators
+
+
 def _bagging_feature_importances(clf: Any, n_features: int) -> np.ndarray | None:
     """Average feature importances across the inner estimators of a BaggingClassifier."""
     if not hasattr(clf, "estimators_"):
@@ -331,11 +427,12 @@ def _compress_explanations(
 
 
 def explain_prediction(model: Any, X_raw: pd.DataFrame, top_n: int = 5) -> Tuple[List[ExplainFeature], str]:
-    """Return local-ish explanation factors for the dashboard.
+    """Devuelve factores locales que explican la predicción de un vehículo.
 
-    Priority:
-    1. SHAP TreeExplainer when compatible.
-    2. Feature-importance fallback, including BaggingClassifier inner trees.
+    Prioridad:
+    1. Bagging sobre árboles: promedio de SHAP local de los árboles internos.
+    2. Otros árboles/boosting compatibles: SHAP TreeExplainer directo.
+    3. Fallback: importancia global ponderada por valores activos de la instancia.
     """
     try:
         clf = _classifier(model)
@@ -347,28 +444,41 @@ def explain_prediction(model: Any, X_raw: pd.DataFrame, top_n: int = 5) -> Tuple
         dense_row = _dense_vector(row)
         X_features = _feature_frame(model, X_raw)
 
-        # First try SHAP for tree models that support it directly.
-        try:
-            import shap  # type: ignore
+        impacts: np.ndarray | None = None
+        method = "unavailable"
 
-            explainer = shap.TreeExplainer(clf)
-            values = explainer.shap_values(row)
-            if isinstance(values, list):
-                values = values[-1]
-            impacts = np.asarray(values).ravel().astype(float)
-            method = "shap.TreeExplainer"
-        except Exception as exc:
-            log.warning("SHAP failed; using fallback explanation: %s", exc)
+        # 1) Caso especial: BaggingClassifier no siempre es soportado como meta-estimador.
+        bagging_shap = _bagging_tree_shap_impacts(clf, row, len(dense_row))
+        if bagging_shap is not None:
+            impacts = bagging_shap
+            method = "shap.TreeExplainer_bagging_average"
+
+        # 2) SHAP directo para árboles/boosting compatibles.
+        if impacts is None:
+            try:
+                import shap  # type: ignore
+
+                explainer = shap.TreeExplainer(clf)
+                values = explainer.shap_values(row)
+                impacts = _extract_class1_shap_values(values)
+                method = "shap.TreeExplainer"
+            except Exception as exc:
+                log.warning("SHAP failed; using fallback explanation: %s", exc)
+
+        # 3) Fallback transparente cuando SHAP no está disponible.
+        if impacts is None:
             fi, method = _classifier_feature_importances(clf, len(dense_row))
             if fi is None:
                 return [], method
-            # Convert global importance into instance-specific relevance.
-            # abs(dense_row) highlights features active/large in this specific case.
+
             if method == "linear_coefficient_fallback":
                 impacts = dense_row * fi
             else:
+                # Importancias de árbol son no firmadas: sirven para ranking local aproximado,
+                # no para dirección positiva/negativa.
                 impacts = np.abs(dense_row) * fi
 
+        impacts = np.asarray(impacts, dtype=float).ravel()
         if len(impacts) != len(dense_row):
             return [], f"unavailable: explanation length mismatch ({len(impacts)} vs {len(dense_row)})"
 
