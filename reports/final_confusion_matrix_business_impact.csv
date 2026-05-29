@@ -1,5 +1,5 @@
-case,count,unit_value,total_value,description
-TP - Bad Buy detectado,659,2500,1647500,Riesgo evitado por detectar una mala compra.
-FP - Auto bueno rechazado,631,-900,-567900,Costo por bloquear un auto que era bueno.
-FN - Bad Buy no detectado,1136,0,0,"Sin valor incremental frente a operar sin modelo, según supuesto confirmado."
-TN - Auto bueno aceptado,12171,0,0,"Flujo normal, neutral para business value incremental."
+case,count,unit_value,total_value
+TP - Bad Buy detectado,430,2500,1075000
+FP - Auto bueno rechazado,77,-900,-69300
+FN - Bad Buy no detectado,1365,-2500,-3412500
+TN - Auto bueno aceptado,12725,900,11452500
