@@ -1,18 +1,24 @@
 # OS / Python
 .DS_Store
+__MACOSX/
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
+.pytest_cache/
 
-# Env
+# Env / secrets
 .env
 .venv/
 env/
+.env.*
 
-# ML artifacts opcionales
-mlruns/
+# Logs / runtime
 *.log
 
-# DVC/cache
-.dvc/cache/
-.dvc/tmp/
+# DVC is not used in this final GitHub-only delivery
+.dvc/
+.dvcignore
+*.dvc
+
+# Streamlit / local artifacts
+.streamlit/secrets.toml

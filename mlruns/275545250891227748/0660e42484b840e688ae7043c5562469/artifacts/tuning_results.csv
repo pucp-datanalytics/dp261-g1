@@ -1,0 +1,6 @@
+model,tuning_method,best_cv_f2,best_params,seconds,n_trials
+RandomForest_random_search,RandomizedSearchCV,0.33952768099109565,"{'clf__max_depth': 11, 'clf__max_features': 'sqrt', 'clf__min_samples_leaf': 24, 'clf__min_samples_split': 126, 'clf__n_estimators': 47}",0.7,
+DecisionTree_random_search,RandomizedSearchCV,0.37736826115775524,"{'clf__criterion': 'log_loss', 'clf__max_depth': 11, 'clf__min_samples_leaf': 40, 'clf__min_samples_split': 132}",0.4,
+LogisticRegression_random_search,RandomizedSearchCV,0.4241143739779245,"{'clf__C': np.float64(0.18862786712359347), 'clf__penalty': 'l1', 'sampler__sampling_strategy': np.float64(0.4142021764531573)}",0.4,
+XGBoost_random_search,RandomizedSearchCV,0.3670091621898851,"{'clf__colsample_bytree': np.float64(0.696805592132731), 'clf__learning_rate': np.float64(0.027386388058464273), 'clf__max_depth': 5, 'clf__n_estimators': 40, 'clf__subsample': np.float64(0.9098528437324805)}",0.5,
+LightGBM_Optuna_TPE,Optuna_TPE_Bayesian,0.3511839705056071,"{'n_estimators': 66, 'max_depth': 3, 'learning_rate': 0.13995909036638496, 'num_leaves': 42, 'min_child_samples': 41, 'subsample': 0.7045474901621301, 'colsample_bytree': 0.7050213529560302, 'reg_alpha': 0.0016480446427978971, 'reg_lambda': 0.022356209648036387, 'scale_pos_weight': 7.1395348837209305, 'random_state': 42, 'n_jobs': 1, 'verbose': -1}",0.5,2.0
