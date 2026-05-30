@@ -1,0 +1,10 @@
+artifact_location: file:///Users/alexandralozano/dp261-g1-final 2/mlruns/275545250891227748/models/m-931280b38bed4199bfa48ec611ef99e7/artifacts
+creation_timestamp: 1780045517139
+experiment_id: '275545250891227748'
+last_updated_timestamp: 1780045521031
+model_id: m-931280b38bed4199bfa48ec611ef99e7
+model_type: null
+name: model
+source_run_id: 0660e42484b840e688ae7043c5562469
+status: 2
+status_message: null
