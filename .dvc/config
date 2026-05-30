@@ -1,4 +1,4 @@
 [core]
     remote = localstore
-['remote "localstore"']
+[remote "localstore"]
     url = ../../dvcstore

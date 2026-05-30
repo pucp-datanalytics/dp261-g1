@@ -237,6 +237,194 @@ def render_metrics_table(metrics: dict[str, Any]) -> None:
     st.dataframe(df, use_container_width=True, hide_index=True)
 
 
+def render_impact_card(label: str, value: str, detail: str, accent: str = "#1f4e79") -> None:
+    """Tarjeta ejecutiva para resaltar resultados de validación."""
+    st.markdown(
+        f"""
+        <div style="
+            border: 1px solid #e5e7eb;
+            border-left: 7px solid {accent};
+            border-radius: 16px;
+            padding: 18px 20px;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            min-height: 132px;
+        ">
+            <div style="font-size: 14px; color: #64748b; font-weight: 600;">{label}</div>
+            <div style="font-size: 30px; color: #111827; font-weight: 850; margin-top: 6px;">{value}</div>
+            <div style="font-size: 14px; color: #475569; margin-top: 8px; line-height: 1.35;">{detail}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_confusion_matrix(metrics: dict[str, Any]) -> None:
+    """Renderiza la matriz de confusión final del modelo."""
+    tn = int(metrics.get("tn", 0))
+    fp = int(metrics.get("fp", 0))
+    fn = int(metrics.get("fn", 0))
+    tp = int(metrics.get("tp", 0))
+
+    z = [[tn, fp], [fn, tp]]
+    text = [
+        [f"TN<br>{tn:,}", f"FP<br>{fp:,}"],
+        [f"FN<br>{fn:,}", f"TP<br>{tp:,}"],
+    ]
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z,
+            x=["Predicción: Good Buy (0)", "Predicción: Bad Buy (1)"],
+            y=["Real: Good Buy (0)", "Real: Bad Buy (1)"],
+            text=text,
+            texttemplate="%{text}",
+            textfont={"size": 17},
+            colorscale="Blues",
+            showscale=False,
+        )
+    )
+    fig.update_layout(
+        title="Matriz de confusión · Test final",
+        height=390,
+        margin=dict(l=20, r=20, t=60, b=30),
+        xaxis_title="Clase predicha por el modelo",
+        yaxis_title="Clase real",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def build_business_breakdown_df(metrics: dict[str, Any], assumptions: dict[str, Any]) -> pd.DataFrame:
+    """Construye la tabla de impacto económico por cuadrante."""
+    tn = int(metrics.get("tn", 0))
+    fp = int(metrics.get("fp", 0))
+    fn = int(metrics.get("fn", 0))
+    tp = int(metrics.get("tp", 0))
+
+    rows = [
+        {
+            "Cuadrante": "TP · Bad Buy detectado",
+            "Cantidad": tp,
+            "Coeficiente": float(assumptions.get("benefit_tp", 2500)),
+            "Interpretación": "Mala compra identificada a tiempo",
+        },
+        {
+            "Cuadrante": "TN · Good Buy aceptado",
+            "Cantidad": tn,
+            "Coeficiente": float(assumptions.get("benefit_tn", 600)),
+            "Interpretación": "Compra correcta que puede continuar",
+        },
+        {
+            "Cuadrante": "FP · Good Buy frenado",
+            "Cantidad": fp,
+            "Coeficiente": float(assumptions.get("cost_fp", -900)),
+            "Interpretación": "Caso sano enviado a revisión/detenido",
+        },
+        {
+            "Cuadrante": "FN · Bad Buy no detectado",
+            "Cantidad": fn,
+            "Coeficiente": float(assumptions.get("cost_fn", -4500)),
+            "Interpretación": "Mala compra que se escapa del filtro",
+        },
+    ]
+    df = pd.DataFrame(rows)
+    df["Impacto USD"] = df["Cantidad"] * df["Coeficiente"]
+    return df
+
+
+def render_validation_summary(
+    metrics: dict[str, Any],
+    assumptions: dict[str, Any],
+    model_name: str,
+    threshold: Any,
+) -> None:
+    """Bloque visual de validación final para la presentación ejecutiva."""
+    business_value = metrics.get("business_value")
+    recall = metrics.get("recall")
+    precision = metrics.get("precision")
+    roc_auc = metrics.get("roc_auc")
+    tp = int(metrics.get("tp", 0))
+    fp = int(metrics.get("fp", 0))
+    fn = int(metrics.get("fn", 0))
+    tn = int(metrics.get("tn", 0))
+
+    st.markdown("### Validación final en test")
+    st.markdown(
+        """
+        La validación final se realiza sobre el conjunto de test reservado. El objetivo de esta sección
+        es conectar la matriz de confusión con el impacto económico esperado.
+        """
+    )
+
+    k1, k2, k3 = st.columns([1.2, 0.9, 0.9])
+    with k1:
+        render_impact_card(
+            "Impacto económico en test final",
+            fmt_usd(business_value),
+            "Valor calculado desde TP, TN, FP y FN usando la función de negocio definida.",
+            "#0f766e",
+        )
+    with k2:
+        render_impact_card(
+            "Recall clase 1",
+            fmt_pct(recall),
+            "Porcentaje de malas compras detectadas por el modelo.",
+            "#2563eb",
+        )
+    with k3:
+        render_impact_card(
+            "ROC-AUC",
+            f"{float(roc_auc):.3f}" if roc_auc is not None else "No disponible",
+            "Capacidad general de discriminación entre Good Buy y Bad Buy.",
+            "#7c3aed",
+        )
+
+    st.markdown("")
+    c_left, c_right = st.columns([1.05, 0.95])
+    with c_left:
+        render_confusion_matrix(metrics)
+
+    with c_right:
+        st.markdown("#### Lectura ejecutiva")
+        st.markdown(
+            f"""
+            **Modelo seleccionado:** `{model_name}`  
+            **Threshold operativo:** `{threshold}`  
+            **Precision clase 1:** **{fmt_pct(precision)}**  
+            **Bad Buys detectados (TP):** **{tp:,}**  
+            **Bad Buys no detectados (FN):** **{fn:,}**  
+            **Good Buys correctamente aceptados (TN):** **{tn:,}**  
+            **Good Buys enviados a revisión (FP):** **{fp:,}**
+            """
+        )
+
+        st.info(
+            "La decisión final prioriza valor económico: el modelo elegido no es necesariamente "
+            "el de mayor métrica técnica aislada, sino el que entrega la mejor combinación entre "
+            "detección de Bad Buys, continuidad de Good Buys y costo de errores."
+        )
+
+    st.markdown("#### Impacto económico por cuadrante")
+    breakdown = build_business_breakdown_df(metrics, assumptions)
+    st.dataframe(
+        breakdown.style.format(
+            {
+                "Cantidad": "{:,.0f}",
+                "Coeficiente": "USD {:,.0f}",
+                "Impacto USD": "USD {:,.0f}",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    total_impact = breakdown["Impacto USD"].sum()
+    st.caption(
+        f"Impacto total calculado desde la matriz de confusión: {fmt_usd(total_impact)}. "
+        "El costo de FN es el más alto porque representa aceptar un vehículo riesgoso como si fuera una buena compra."
+    )
+
+
 # ---------------------------------------------------------------------
 # Carga de información del proyecto
 # ---------------------------------------------------------------------
@@ -267,15 +455,6 @@ st.markdown(
     desempeño del modelo en una recomendación comercial accionable.
     """
 )
-
-kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-kpi1.metric("Modelo final", model_name)
-kpi2.metric("Impacto económico", fmt_usd(business_value))
-kpi3.metric("Recall clase 1", fmt_pct(recall))
-kpi4.metric("ROC-AUC", f"{float(roc_auc):.3f}" if roc_auc is not None else "No disponible")
-
-st.divider()
-
 
 # ---------------------------------------------------------------------
 # 1. Contexto de negocio
@@ -472,46 +651,19 @@ st.caption(
 # ---------------------------------------------------------------------
 
 st.header("5. Resultados y selección final")
-left, right = st.columns([1.1, 1])
 
-with left:
-    render_model_ranking(ranking)
+st.subheader("Comparación de modelos por valor de negocio")
+render_model_ranking(ranking)
 
-with right:
-    st.subheader("Modelo final")
-    if roc_auc is not None:
-        st.markdown(
-            f"""
-            **Modelo seleccionado:** `{model_name}`  
-            **Threshold operativo:** `{metadata.get("threshold", 0.5)}`  
-            **Valor económico en test final:** **{fmt_usd(business_value)}**  
-            **Recall clase 1:** **{fmt_pct(recall)}**  
-            **Precision clase 1:** **{fmt_pct(precision)}**  
-            **ROC-AUC:** **{float(roc_auc):.3f}**  
-            """
-        )
-    else:
-        st.markdown(
-            f"""
-            **Modelo seleccionado:** `{model_name}`  
-            **Threshold operativo:** `{metadata.get("threshold", 0.5)}`  
-            **Valor económico en test final:** **{fmt_usd(business_value)}**
-            """
-        )
+render_validation_summary(
+    metrics=metrics,
+    assumptions=assumptions,
+    model_name=model_name,
+    threshold=metadata.get("threshold", 0.5),
+)
 
-    st.markdown(
-        """
-        La selección final se basa en el valor económico obtenido bajo la función de negocio,
-        no únicamente en una métrica técnica aislada. Esto permite alinear la decisión del
-        modelo con el impacto esperado para la empresa.
-        """
-    )
-
-    st.subheader("Métricas finales")
+with st.expander("Ver métricas técnicas completas", expanded=False):
     render_metrics_table(metrics)
-
-st.subheader("Descomposición económica por matriz de confusión")
-render_confusion_business_breakdown(metrics, assumptions)
 
 
 # ---------------------------------------------------------------------
